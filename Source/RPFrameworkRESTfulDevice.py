@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkRESTfulDevice by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkRESTfulDevice by RogueProeliator <adam.d.ashe@gmail.com>
 # 	This class is a concrete implementation of the RPFrameworkDevice as a device which
 #	communicates via a REST style HTTP connection.
 #	
@@ -29,6 +29,12 @@
 #		Fixed bug with the download file command when no authentication is enabled
 #	Version 1.0.15:
 #		Fixed bug with download file when issue occurs (null reference exception)
+#	Version 1.0.17:
+#		Added unicode support
+#		Changed the GET operation to use requests
+#		Changed the DOWNLOADFILE/DOWNLOADIMAGE operations to use requests
+#		Changed command parameters for all requests to allow additional options
+#		Added new handleDeviceTextResponse routine to handle response
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -43,6 +49,7 @@ import Queue
 import os
 import re
 import string
+import subprocess
 import sys
 import threading
 import telnetlib
@@ -51,26 +58,29 @@ import urllib
 import urllib2
 from urlparse import urlparse
 
+import requests
 import RPFrameworkPlugin
 import RPFrameworkCommand
 import RPFrameworkDevice
 import RPFrameworkNetworkingWOL
+import RPFrameworkUtils
 
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Constants and configuration variables
 #/////////////////////////////////////////////////////////////////////////////////////////
-CMD_RESTFUL_PUT = "RESTFUL_PUT"
-CMD_RESTFUL_GET = "RESTFUL_GET"
-CMD_SOAP_REQUEST = "SOAP_REQUEST"
-CMD_JSON_REQUEST = "JSON_REQUEST"
-CMD_DOWNLOADFILE = "DOWNLOAD_FILE"
+CMD_RESTFUL_PUT = u'RESTFUL_PUT'
+CMD_RESTFUL_GET = u'RESTFUL_GET'
+CMD_SOAP_REQUEST = u'SOAP_REQUEST'
+CMD_JSON_REQUEST = u'JSON_REQUEST'
+CMD_DOWNLOADFILE = u'DOWNLOAD_FILE'
+CMD_DOWNLOADIMAGE = u'DOWNLOAD_IMAGE'
 
-GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY = "updateStatusPollerIntervalProperty"
-GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID = "updateStatusPollerActionId"
-GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY = "updateStatusPollerStartupDelay"
+GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY = u'updateStatusPollerIntervalProperty'
+GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID = u'updateStatusPollerActionId'
+GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY = u'updateStatusPollerStartupDelay'
 
-GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = "emptyQueueReducedWaitCycles"
+GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
 
 
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -104,22 +114,22 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def concurrentCommandProcessingThread(self, commandQueue):
 		try:
-			self.hostPlugin.logDebugMessage("Concurrent Processing Thread started for device " + str(self.indigoDevice.id), RPFrameworkPlugin.DEBUGLEVEL_MED)
+			self.hostPlugin.logDebugMessage(u'Concurrent Processing Thread started for device ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id), RPFrameworkPlugin.DEBUGLEVEL_MED)
 		
 			# obtain the IP or host address that will be used in connecting to the
 			# RESTful service via a function call to allow overrides
 			deviceHTTPAddress = self.getRESTfulDeviceAddress()
 			if deviceHTTPAddress is None:
-				indigo.server.log("No IP address specified for device " + str(self.indigoDevice.id) + "; ending command processing thread.", isError=True)
+				indigo.server.log(u'No IP address specified for device ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'; ending command processing thread.', isError=True)
 				return
 			
 			# retrieve any configuration information that may have been setup in the
 			# plugin configuration and/or device configuration
-			updateStatusPollerPropertyName = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY, "updateInterval")
-			updateStatusPollerInterval = int(self.indigoDevice.pluginProps.get(updateStatusPollerPropertyName, "90"))
+			updateStatusPollerPropertyName = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY, u'updateInterval')
+			updateStatusPollerInterval = int(self.indigoDevice.pluginProps.get(updateStatusPollerPropertyName, u'90'))
 			updateStatusPollerNextRun = None
-			updateStatusPollerActionId = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID, "")
-			emptyQueueReducedWaitCycles = int(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES, "80"))
+			updateStatusPollerActionId = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID, u'')
+			emptyQueueReducedWaitCycles = int(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES, u'80'))
 			
 			# spin up the database connection, if this plugin supports databases
 			self.dbConn = self.hostPlugin.openDatabaseConnection(self.indigoDevice.deviceTypeId)
@@ -132,7 +142,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 				# process pending commands now...
 				while not commandQueue.empty():
 					lenQueue = commandQueue.qsize()
-					self.hostPlugin.logDebugMessage("Command queue has " + str(lenQueue) + " command(s) waiting", RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+					self.hostPlugin.logDebugMessage(u'Command queue has ' + RPFrameworkUtils.to_unicode(lenQueue) + u' command(s) waiting', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 					
 					# the command name will identify what action should be taken... we will handle the known
 					# commands and dispatch out to the device implementation, if necessary, to handle unknown
@@ -141,11 +151,11 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 					if command.commandName == RPFrameworkCommand.CMD_INITIALIZE_CONNECTION:
 						# specialized command to instanciate the concurrent thread
 						# safely ignore this... just used to spin up the thread
-						self.hostPlugin.logDebugMessage("Create connection command de-queued", RPFrameworkPlugin.DEBUGLEVEL_MED)
+						self.hostPlugin.logDebugMessage(u'Create connection command de-queued', RPFrameworkPlugin.DEBUGLEVEL_MED)
 						
 						# if the device supports polling for status, it may be initiated here now; however, we should implement a pause to ensure that
 						# devices are created properly (RESTFul devices may respond too fast since no connection need be established)
-						statusUpdateStartupDelay = float(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY, "3"))
+						statusUpdateStartupDelay = float(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY, u'3'))
 						if statusUpdateStartupDelay > 0.0:
 							commandQueue.put(RPFrameworkCommand.RPFrameworkCommand(RPFrameworkCommand.CMD_PAUSE_PROCESSING, commandPayload=str(statusUpdateStartupDelay)))
 						commandQueue.put(RPFrameworkCommand.RPFrameworkCommand(RPFrameworkCommand.CMD_UPDATE_DEVICE_STATUS_FULL, parentAction=updateStatusPollerActionId))
@@ -160,20 +170,20 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 						# payload of the command
 						try:
 							pauseTime = float(command.commandPayload)
-							self.hostPlugin.logDebugMessage("Initiating sleep of " + str(pauseTime) + " seconds from command.", RPFrameworkPlugin.DEBUGLEVEL_MED)
+							self.hostPlugin.logDebugMessage(u'Initiating sleep of ' + RPFrameworkUtils.to_unicode(pauseTime) + u' seconds from command.', RPFrameworkPlugin.DEBUGLEVEL_MED)
 							time.sleep(pauseTime)
 						except:
-							indigo.server.log("Invalid pause time requested", isError=True)
+							indigo.server.log(u'Invalid pause time requested', isError=True)
 							
 					elif command.commandName == RPFrameworkCommand.CMD_UPDATE_DEVICE_STATUS_FULL:
 						# this command instructs the plugin to update the full status of the device (all statuses
 						# that may be read from the device should be read)
-						if updateStatusPollerActionId != "":
-							self.hostPlugin.logDebugMessage("Executing full status update request...", RPFrameworkPlugin.DEBUGLEVEL_MED)
+						if updateStatusPollerActionId != u'':
+							self.hostPlugin.logDebugMessage(u'Executing full status update request...', RPFrameworkPlugin.DEBUGLEVEL_MED)
 							self.hostPlugin.executeAction(None, indigoActionId=updateStatusPollerActionId, indigoDeviceId=self.indigoDevice.id, paramValues=None)
 							updateStatusPollerNextRun = time.time() + updateStatusPollerInterval
 						else:
-							self.hostPlugin.logDebugMessage("Ignoring status update request, no action specified to update device status", RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							self.hostPlugin.logDebugMessage(u'Ignoring status update request, no action specified to update device status', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 							
 					elif command.commandName == RPFrameworkCommand.CMD_NETWORKING_WOL_REQUEST:
 						# this is a request to send a Wake-On-LAN request to a network-enabled device
@@ -183,31 +193,133 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 						except:
 							self.hostPlugin.exceptionLog()
 						
-					elif command.commandName == CMD_RESTFUL_PUT or command.commandName == CMD_RESTFUL_GET:
+					elif command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+						try:
+							self.hostPlugin.logDebugMessage(u'Processing GET operation: ' + RPFrameworkUtils.to_unicode(command.commandPayload), RPFrameworkPlugin.DEBUGLEVEL_MED)
+							
+							# gather all of the parameters from the command payload
+							# the payload should have the following format:
+							# [0] => request method (http|https|etc.)
+							# [1] => path for the GET operation
+							# [2] => authentication type: none|basic|digest
+							# [3] => username
+							# [4] => password
+							#
+							# CMD_DOWNLOADFILE or CMD_DOWNLOADIMAGE
+							# [5] => download filename/path
+							# [6] => image resize width
+							# [7] => image resize height
+							commandPayloadList = command.getPayloadAsList()
+							fullGetUrl = commandPayloadList[0] + u'://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_unicode(deviceHTTPAddress[1]) + commandPayloadList[1]
+							
+							customHeaders = {}
+							self.addCustomHTTPHeaders(customHeaders)
+							
+							authenticationParam = None
+							authenticationType = u'none'
+							username = u''
+							password = u''
+							if len(commandPayloadList) >= 3:
+								authenticationType = commandPayloadList[2]
+							if len(commandPayloadList) >= 4:
+								username = commandPayloadList[3]
+							if len(commandPayloadList) >= 5:
+								password = commandPayloadList[4]
+							if authenticationType != 'none' and username != u'':
+								self.hostPlugin.logDebugMessage(u'Using login credentials... Username=> ' + username + u'; Password=>' + RPFrameworkUtils.to_unicode(len(password)) + u' characters long', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+								authenticationParam = (username, password)
+							
+							# execute the URL fetching depending upon the method requested
+							if command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+								responseObj = requests.get(fullGetUrl, auth=authenticationParam, headers=customHeaders, verify=False)
+								
+							# if the network command failed then allow the error processor to handle the issue
+							if responseObj.status_code == 200:
+								# the response handling will depend upon the type of command... binary returns must be
+								# handled separately from (expected) text-based ones
+								if command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+									# this is a binary return that should be saved to the file system without modification
+									if len(commandPayloadList) >= 6:
+										saveLocation = commandPayloadList[5]
+									
+										# execute the actual save from the binary response stream
+										try:
+											localFile = open(RPFrameworkUtils.to_str(saveLocation), "wb")
+											localFile.write(responseObj.content)
+											self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(responseObj.status_code) + u'] -=- binary data written to ' + RPFrameworkUtils.to_unicode(saveLocation) + u'-=-', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+										
+											if command.commandName == CMD_DOWNLOADIMAGE:
+												imageResizeWidth = 0
+												imageResizeHeight = 0
+												if len(command.commandPayload) >= 7:
+													imageResizeWidth = int(command.commandPayload[6])
+												if len(command.commandPayload) >= 8:
+													imageResizeHeight = int(command.commandPayload[7])
+								
+												resizeCommandLine = u''
+												if imageResizeWidth > 0 and imageResizeHeight > 0:
+													# we have a specific size as a target...
+													resizeCommandLine = u'sips -z ' + RPFrameworkUtils.to_unicode(imageResizeHeight) + u' ' + RPFrameworkUtils.to_unicode(imageResizeWidth) + u' ' + saveLocation
+												elif imageResizeWidth > 0:
+													# we have a maximum size measurement
+													resizeCommandLine = u'sips -Z ' + RPFrameworkUtils.to_unicode(imageResizeWidth) + u' ' + saveLocation
+									
+												# if a command line has been formed, fire that off now...
+												if resizeCommandLine == u'':
+													self.hostPlugin.logDebugMessage(u'No image size specified for ' + RPFrameworkUtils.to_unicode(saveLocation) + u'; skipping resize.', RPFrameworkPlugin.DEBUGLEVEL_MED)
+												else:
+													self.hostPlugin.logDebugMessage(u'Executing resize via command line "' + resizeCommandLine + u'"', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+													try:
+														subprocess.Popen(resizeCommandLine, shell=True)
+														self.hostPlugin.logDebugMessage(saveLocation + u' resized via sip shell command', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+													except:
+														indigo.server.log(u'Error resizing image via sips:', isError=True)
+														self.hostPlugin.exceptionLog()
+										finally:
+											if not localFile is None:
+												localFile.close()					
+									else:
+										indigo.server.log(u'Unable to complete download action - no filename specified', isError=True)
+								else:
+									# handle this return as a text-based return
+									self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(responseObj.status_code) + u'] ' + RPFrameworkUtils.to_unicode(responseObj.text), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+									self.hostPlugin.logDebugMessage(command.commandName + u' command completed; beginning response processing', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+									self.handleDeviceTextResponse(responseObj, command)
+									self.hostPlugin.logDebugMessage(command.commandName + u' command response processing completed', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+									
+							elif responseObj.status_code == 401:
+								self.handleRESTfulError(command, u'Unauthorized')
+							 	
+						except Exception, e:
+							self.handleRESTfulError(command, e)
+							if self.hostPlugin.debug == True:
+								self.hostPlugin.exceptionLog()
+						
+					elif command.commandName == CMD_RESTFUL_PUT:
 						try:
 							# this is a put operation... create an HTTP GET or POST operation to be sent to
 							# the device
-							requestHttpVerb = "GET"
-							if command.commandName == CMD_RESTFUL_PUT:
-								requestHttpVerb = "POST"
-							self.hostPlugin.logDebugMessage("Processing " + requestHttpVerb + " operation: " + command.commandPayload, RPFrameworkPlugin.DEBUGLEVEL_MED)
+							#requestHttpVerb = u'GET'
+							#if command.commandName == CMD_RESTFUL_PUT:
+							#	requestHttpVerb = u'POST'
+							#self.hostPlugin.logDebugMessage(u'Processing ' + requestHttpVerb + u' operation: ' + RPFrameworkUtils.to_unicode(command.commandPayload), RPFrameworkPlugin.DEBUGLEVEL_MED)
 			
-							conn = httplib.HTTPConnection(deviceHTTPAddress[0], int(deviceHTTPAddress[1]))
-							conn.connect()
-							conn.putrequest(requestHttpVerb, command.commandPayload)
-							self.addCustomHTTPHeaders(conn)
-							conn.endheaders()
+							#conn = httplib.HTTPConnection(deviceHTTPAddress[0], int(deviceHTTPAddress[1]))
+							#conn.connect()
+							#conn.putrequest(requestHttpVerb, RPFrameworkUtils.to_str(command.commandPayload))
+							#self.addCustomHTTPHeaders(conn)
+							#conn.endheaders()
 			
-							responseToREST = conn.getresponse()
-							responseToRESTText = responseToREST.read()
-							self.hostPlugin.logDebugMessage("Command Response: [" + str(responseToREST.status) + "] " + responseToRESTText, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							#responseToREST = conn.getresponse()
+							#responseToRESTText = responseToREST.read()
+							#self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(responseToREST.status) + u'] ' + RPFrameworkUtils.to_unicode(responseToRESTText), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 			
-							conn.close()						
-							self.hostPlugin.logDebugMessage(command.commandName + " command completed.", RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							#conn.close()						
+							#self.hostPlugin.logDebugMessage(command.commandName + u' command completed.', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 							
 							# allow the framework to handle the response...
-							self.handleDeviceResponse(responseToREST, responseToRESTText, command)
-							
+							#self.handleDeviceResponse(responseToREST, responseToRESTText, command)
+							pass
 						except Exception, e:
 							self.handleRESTfulError(command, e)
 							if self.hostPlugin.debug == True:
@@ -217,36 +329,36 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 						try:
 							# this is to post a SOAP request to a web service... this will be similar to a restful put request
 							# but will contain a body payload
-							self.hostPlugin.logDebugMessage("Received SOAP/JSON command request: " + command.commandPayload, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							self.hostPlugin.logDebugMessage(u'Received SOAP/JSON command request: ' + command.commandPayload, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 							soapPayloadParser = re.compile("^\s*([^\n]+)\n\s*([^\n]+)\n(.*)$", re.DOTALL)
 							soapPayloadData = soapPayloadParser.match(command.commandPayload)
 							soapPath = soapPayloadData.group(1).strip()
 							soapAction = soapPayloadData.group(2).strip()
 							soapBody = soapPayloadData.group(3).strip()
-							self.hostPlugin.logDebugMessage("Processing SOAP/JSON operation to " + soapPath, RPFrameworkPlugin.DEBUGLEVEL_MED)
+							self.hostPlugin.logDebugMessage(u'Processing SOAP/JSON operation to ' + soapPath, RPFrameworkPlugin.DEBUGLEVEL_MED)
 
 							conn = httplib.HTTPConnection(deviceHTTPAddress[0], int(deviceHTTPAddress[1]))
 							conn.connect()
 						
-							conn.putrequest('POST', soapPath)
+							conn.putrequest("POST", RPFrameworkUtils.to_str(soapPath))
 							if command.commandName == CMD_SOAP_REQUEST:
 								conn.putheader("Content-type", "text/xml; charset=\"UTF-8\"")
-								conn.putheader("SOAPAction", "\"" + soapAction + "\"")
+								conn.putheader("SOAPAction", "\"" + RPFrameworkUtils.to_str(soapAction) + "\"")
 							else:
 								conn.putheader("Content-type", "application/json")
 							self.addCustomHTTPHeaders(conn)
 							conn.putheader("Content-Length", "%d" % len(soapBody))
 							conn.endheaders()
 						
-							conn.send(soapBody)
-							self.hostPlugin.logDebugMessage("Sending SOAP/JSON request:\n" + soapBody, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							conn.send(RPFrameworkUtils.to_str(soapBody))
+							self.hostPlugin.logDebugMessage(u'Sending SOAP/JSON request:\n' + RPFrameworkUtils.to_str(soapBody), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 						
 							soapResponse = conn.getresponse()
 							soapResponseText = soapResponse.read()
-							self.hostPlugin.logDebugMessage("Command Response: [" + str(soapResponse.status) + "] " + soapResponseText, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(soapResponse.status) + u'] ' + RPFrameworkUtils.to_unicode(soapResponseText), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 			
 							conn.close()						
-							self.hostPlugin.logDebugMessage(command.commandName + " command completed.", RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							self.hostPlugin.logDebugMessage(command.commandName + u' command completed.', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 							
 							# allow the framework to handle the response...
 							self.handleDeviceResponse(soapResponse, soapResponseText, command)
@@ -255,46 +367,6 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							if self.hostPlugin.debug == True:
 								self.hostPlugin.exceptionLog()
 					
-					elif command.commandName == CMD_DOWNLOADFILE:
-						try:
-							# this is a request to download a file from the network to the local computer; the command
-							# payload must include the complete URL and the file to save
-							downloadSource = command.commandPayload[0]
-							saveLocation = command.commandPayload[1]
-							parsedUrl = urlparse(downloadSource)
-							authenticationType = command.commandPayload[2]
-							username = command.commandPayload[3]
-							password = command.commandPayload[4]
-							
-							self.hostPlugin.logDebugMessage("Processing SOAP operation to download " + downloadSource + " to " + saveLocation, RPFrameworkPlugin.DEBUGLEVEL_MED)
-							authHandler = None
-							if authenticationType == "Basic" and username != "" and password != "":
-								passwordManager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-								passwordManager.add_password(None, parsedUrl.netloc, username, password)
-								authHandler = urllib2.HTTPBasicAuthHandler(passwordManager)
-								opener = urllib2.build_opener(authHandler)
-							else:
-								opener = urllib2.build_opener()
-							
-							# process the download
-							f = opener.open(downloadSource)
-							try:
-								localFile = open(saveLocation, "wb")
-								localFile.write(f.read())
-							finally:
-								if not localFile is None:
-									localFile.close()					
-							f.close()
-							
-							# allow the plugin to handle the response, in this case just say "success" since
-							# we don't have a real return
-							self.handleDeviceResponse(None, "CMD_DOWNLOADFILE: Success", command)
-							
-						except Exception, e:
-							self.handleRESTfulError(command, e)
-							if self.hostPlugin.debug == True:
-								self.hostPlugin.exceptionLog()
-						
 					else:
 						# this is an unknown command; dispatch it to another routine which is
 						# able to handle the commands (to be overridden for individual devices)
@@ -303,7 +375,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 					# if the command has a pause defined for after it is completed then we
 					# should execute that pause now
 					if command.postCommandPause > 0.0 and continueProcessingCommands == True:
-						self.hostPlugin.logDebugMessage("Post Command Pause: " + str(command.postCommandPause), RPFrameworkPlugin.DEBUGLEVEL_MED)
+						self.hostPlugin.logDebugMessage(u'Post Command Pause: ' + RPFrameworkUtils.to_unicode(command.postCommandPause), RPFrameworkPlugin.DEBUGLEVEL_MED)
 						time.sleep(command.postCommandPause)
 					
 					# complete the dequeuing of the command, allowing the next
@@ -334,7 +406,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 		except:
 			self.hostPlugin.exceptionLog()
 		finally:
-			self.hostPlugin.logDebugMessage("Command thread ending processing", RPFrameworkPlugin.DEBUGLEVEL_LOW)
+			self.hostPlugin.logDebugMessage(u'Command thread ending processing', RPFrameworkPlugin.DEBUGLEVEL_LOW)
 			self.hostPlugin.closeDatabaseConnection(self.dbConn)
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -368,7 +440,16 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 		# and determine if any match
 		for rpResponse in self.hostPlugin.getDeviceResponseDefinitions(self.indigoDevice.deviceTypeId):
 			if rpResponse.isResponseMatch(responseText, rpCommand, self, self.hostPlugin):
-				self.hostPlugin.logDebugMessage("Found response match: " + rpResponse.responseId, RPFrameworkPlugin.DEBUGLEVEL_MED)
+				self.hostPlugin.logDebugMessage(u'Found response match: ' + RPFrameworkUtils.to_unicode(rpResponse.responseId), RPFrameworkPlugin.DEBUGLEVEL_MED)
+				rpResponse.executeEffects(responseText, rpCommand, self, self.hostPlugin)
+	
+	def handleDeviceTextResponse(self, responseObj, rpCommand):
+		# loop through the list of response definitions defined in the (base) class
+		# and determine if any match
+		responseText = responseObj.text
+		for rpResponse in self.hostPlugin.getDeviceResponseDefinitions(self.indigoDevice.deviceTypeId):
+			if rpResponse.isResponseMatch(responseText, rpCommand, self, self.hostPlugin):
+				self.hostPlugin.logDebugMessage(u'Found response match: ' + RPFrameworkUtils.to_unicode(rpResponse.responseId), RPFrameworkPlugin.DEBUGLEVEL_MED)
 				rpResponse.executeEffects(responseText, rpCommand, self, self.hostPlugin)
 	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -377,7 +458,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-		
 	def handleRESTfulError(self, rpCommand, err):
 		if rpCommand.commandName == CMD_RESTFUL_PUT or rpCommand.commandName == CMD_RESTFUL_GET:
-			indigo.server.log("An error occurred executing the GET/PUT request (Device: " + str(self.indigoDevice.id) + "): " + str(err), isError=True)
+			indigo.server.log(u'An error occurred executing the GET/PUT request (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err), isError=True)
 		else:
-			indigo.server.log("An error occurred processing the SOAP/JSON POST request: (Device: " + str(self.indigoDevice.id) + "): " + str(err), isError=True)		
+			indigo.server.log(u'An error occurred processing the SOAP/JSON POST request: (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err), isError=True)		
 	

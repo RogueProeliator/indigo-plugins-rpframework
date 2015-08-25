@@ -1,13 +1,13 @@
 #! /usr/bin/env python
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# IndigoSql by RogueProeliator <rp@rogueproeliator.com>
+# IndigoSql by RogueProeliator <adam.d.ashe@gmail.com>
 #	This file provides access to a SQL database in a standard method, be it in
 #	SQLList or PostGRE format.
 # 
 #	Much of this file was adapted from Perceptive Automation's SQL Logger plugin and used
 #	with permission of the authors. Therefore, portions of this code are governed by their
-#	copyright, found below. Thus, redistribution of this software in any form is not
+#	copyright, found below. As such, redistribution of this software in any form is not
 #	permitted without permission from all parties.
 #
 # 	################### ORIGINAL COPYRIGHT ###################

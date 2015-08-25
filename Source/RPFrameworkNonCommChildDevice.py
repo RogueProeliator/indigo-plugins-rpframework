@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkNonCommChildDevice by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkNonCommChildDevice by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Base class for all RogueProeliator's devices which do not actively communicate but
 #	rather function to pass commands along to a parent device; examples would be zones indigo
 #	a multi-room audio system or zones in an alarm panel
@@ -22,6 +22,7 @@ import Queue
 import RPFrameworkCommand
 import RPFrameworkPlugin
 import RPFrameworkDevice
+import RPFrameworkUtils
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Constants and configuration variables
@@ -71,7 +72,7 @@ class RPFrameworkNonCommChildDevice(RPFrameworkDevice.RPFrameworkDevice):
 	# plugin...
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def queueDeviceCommand(self, command):
-		parentDeviceId = int(self.indigoDevice.pluginProps[self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkPlugin.GUI_CONFIG_PARENTDEVICEIDPROPERTYNAME, "")])
+		parentDeviceId = int(self.indigoDevice.pluginProps[self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkPlugin.GUI_CONFIG_PARENTDEVICEIDPROPERTYNAME, u'')])
 		if parentDeviceId in self.hostPlugin.managedDevices:
 			self.hostPlugin.managedDevices[parentDeviceId].queueDeviceCommand(command)
 		

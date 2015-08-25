@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkIndigoParamDefn by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkIndigoParamDefn by RogueProeliator <adam.d.ashe@gmail.com>
 # 	This class stores the definition of a parameter coming from Indigo - for an action,
 #	device configuration, plugin configuration, etc. It is used so that the base classes
 #	may automatically handle parameter functions (such as validation) that normally would
@@ -14,6 +14,9 @@
 #		Added the list parameter type
 #	Version 1.0.15 [3-30-2015]:
 #		Added the ParamTypeOSFilePath parameter type
+#	Version 1.0.17:
+#		Added unicode support
+#		Fixed issue on line 119 for boolean params
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -28,6 +31,7 @@ import socket
 import sys
 import time
 from urllib2 import urlopen
+import RPFrameworkUtils
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Constants and configuration variables
@@ -59,7 +63,7 @@ class RPFrameworkIndigoParamDefn(object):
 	# Constructor allows passing in the data that makes up the definition of the paramType
 	# (with the type and ID being the only two required fields
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def __init__(self, indigoId, paramType, isRequired=False, defaultValue="", minValue=0, maxValue=sys.maxint, validationExpression="", invalidValueMessage=""):
+	def __init__(self, indigoId, paramType, isRequired=False, defaultValue="", minValue=0, maxValue=sys.maxint, validationExpression=u'', invalidValueMessage=u''):
 		self.indigoId = indigoId
 		self.paramType = paramType
 		self.isRequired = isRequired
@@ -79,7 +83,7 @@ class RPFrameworkIndigoParamDefn(object):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def isValueValid(self, proposedValue):
 		# if the value is required but empty then error here
-		if proposedValue == None or proposedValue == "":
+		if proposedValue == None or proposedValue == u'':
 			return not self.isRequired
 		
 		# now validate that the type is correct...
@@ -87,7 +91,7 @@ class RPFrameworkIndigoParamDefn(object):
 			try:
 				proposedIntValue = int(proposedValue)
 				if proposedIntValue < self.minValue or proposedIntValue > self.maxValue:
-					raise "Param value not in range"
+					raise u'Param value not in range'
 				return True
 			except:
 				return False
@@ -96,7 +100,7 @@ class RPFrameworkIndigoParamDefn(object):
 			try:
 				proposedFltValue = float(proposedValue)
 				if proposedFltValue < self.minValue or proposedFltValue > self.maxValue:
-					raise "Param value not in range"
+					raise u'Param value not in range'
 				return True
 			except:
 				return False
@@ -105,19 +109,19 @@ class RPFrameworkIndigoParamDefn(object):
 			if type(proposedValue) is bool:
 				return True
 			else:
-				return proposedValue == "true" or proposedValue == "True"
+				return proposedValue.lower() == u'true'
 			
 		elif self.paramType == ParamTypeOSDirectoryPath:
 			# validate that the path exists... and that it is a directory
-			return os.path.isdir(proposedValue)
+			return os.path.isdir(RPFrameworkUtils.to_str(proposedValue))
 			
 		elif self.paramType == ParamTypeOSFilePath:
 			# validate that the file exists (and that it is a file)
-			return os.path.isfile(proposedValue)
+			return os.path.isfile(RPFrameworkUtils.to_str(proposedValue))
 		
 		elif self.paramType == ParamTypeIPAddress:
 			# validate the IP address using IPv4 standards for now...
-			return self.isIPv4Valid(proposedValue)
+			return self.isIPv4Valid(RPFrameworkUtils.to_str(proposedValue))
 			
 		elif self.paramType == ParamTypeList:
 			# validate that the list contains between the minimum and maximum
@@ -130,7 +134,7 @@ class RPFrameworkIndigoParamDefn(object):
 		else:
 			# default is a string value... so this will need to check against the
 			# validation expression, if set, and string length
-			if self.validationExpression != "":
+			if self.validationExpression != u'':
 				if re.search(self.validationExpression, proposedValue, re.I) == None:
 					return False
 					
@@ -152,7 +156,7 @@ class RPFrameworkIndigoParamDefn(object):
 			
 		# separate the IP address into its components... this limits the format for the
 		# user input but is using a fairly standard notation so acceptable
-		addressParts = ip.split(".")	
+		addressParts = ip.split(u'.')	
 		if len(addressParts) != 4:
 			return False
 				

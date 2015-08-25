@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkIndigoActionDfn by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkIndigoActionDfn by RogueProeliator <adam.d.ashe@gmail.com>
 # 	This class defines an action available to the user/processed by the plugin in a
 #	standard manner such that the base classes in the framework are able to process many
 #	actions automatically w/o custom writing them for each plugin.
@@ -13,6 +13,8 @@
 #		Added support for the executeCondition parameter on the commands to execute
 #	Version 1.0.16:
 #		Fixed typo which causes an error when validation fails for an action
+#	Version 1.0.17:
+#		Added unicode support
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -26,6 +28,7 @@ import math
 import re
 import RPFrameworkCommand
 import RPFrameworkPlugin
+import RPFrameworkUtils
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Constants and configuration variables
@@ -49,12 +52,12 @@ class RPFrameworkIndigoActionDfn(object):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor allows passing in the data that makes up the definition of the action
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def __init__(self, indigoActionId, commandName = "", commandParamFormatString = "", commandExecuteCount="1", indigoParams=None):
+	def __init__(self, indigoActionId, commandName = u'', commandParamFormatString = u'', commandExecuteCount=u'1', indigoParams=None):
 		self.indigoActionId = indigoActionId
 		
 		self.actionCommands = []
-		if commandName != "" and commandParamFormatString != "":
-			self.actionCommands.append((commandName, commandParamFormatString, commandExecuteCount, "", ""))
+		if commandName != u'' and commandParamFormatString != u'':
+			self.actionCommands.append((commandName, commandParamFormatString, commandExecuteCount, u'', u''))
 		
 		self.indigoParams = indigoParams
 		if self.indigoParams == None:
@@ -74,7 +77,7 @@ class RPFrameworkIndigoActionDfn(object):
 	# Allows an outside class to add a new command to be sent for this action. The
 	# commands will be sent in the order received
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def addIndigoCommand(self, commandName, commandFormatString, commandExecuteCount="1", commandRepeatDelay="", commandExecuteCondition=""):
+	def addIndigoCommand(self, commandName, commandFormatString, commandExecuteCount=u'1', commandRepeatDelay=u'', commandExecuteCondition=u''):
 		self.actionCommands.append((commandName, commandFormatString, commandExecuteCount, commandRepeatDelay, commandExecuteCondition))
 		
 		
@@ -117,8 +120,8 @@ class RPFrameworkIndigoActionDfn(object):
 		# validate that the values sent in are valid for this action
 		validationResults = self.validateActionValues(paramValues)
 		if validationResults[0] == False:
-			indigo.server.log("Invalid values sent for action " + self.indigoActionId + "; the following errors were found:")
-			indigo.server.log(str(validationResults[2]))
+			indigo.server.log(u'Invalid values sent for action ' + RPFrameworkUtils.to_unicode(self.indigoActionId) + u'; the following errors were found:')
+			indigo.server.log(RPFrameworkUtils.to_unicode(validationResults[2]))
 			return
 		
 		# determine the list of parameter values based upon the parameter definitions
@@ -132,32 +135,32 @@ class RPFrameworkIndigoActionDfn(object):
 		for (commandName, commandFormatString, commandExecuteCount, repeatCommandDelay, executeCondition) in self.actionCommands:
 			# this command may have an execute condition which could prevent the command
 			# from firing...
-			if executeCondition != None and executeCondition != "":
+			if executeCondition != None and executeCondition != u'':
 				# this should eval to a boolean value
 				if eval(rpPlugin.substituteIndigoValues(executeCondition, rpDevice, resolvedValues)) == False:
-					rpPlugin.logDebugMessage("Execute condition failed, skipping execution for command: " + commandName, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+					rpPlugin.logDebugMessage(u'Execute condition failed, skipping execution for command: ' + commandName, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 					continue
 		
 			# determine the number of times to execute this command (supports sending the same request
 			# multiple times in a row)
 			executeTimesStr = rpPlugin.substituteIndigoValues(commandExecuteCount, rpDevice, resolvedValues)
-			if executeTimesStr.startswith("eval:"):
-				executeTimesStr = eval(executeTimesStr.replace("eval:", ""))
-			if executeTimesStr == None or executeTimesStr == "":
-				executeTimesStr = "1"
+			if executeTimesStr.startswith(u'eval:'):
+				executeTimesStr = eval(executeTimesStr.replace(u'eval:', u''))
+			if executeTimesStr == None or executeTimesStr == u'':
+				executeTimesStr = u'1'
 			executeTimes = float(executeTimesStr)
 		
 			# create a new command for each of the count requested...
 			for i in range(0,executeTimes):
 				# create the payload based upon the format string provided for the command
 				payload = rpPlugin.substituteIndigoValues(commandFormatString, rpDevice, resolvedValues)
-				if payload.startswith("eval:"):
-					payload = eval(payload.replace("eval:", ""))
+				if payload.startswith(u'eval:'):
+					payload = eval(payload.replace(u'eval:', u''))
 				
 				# determine the delay that should be added after the command (delay between repeats)
 				delayTimeStr = rpPlugin.substituteIndigoValues(repeatCommandDelay, rpDevice, resolvedValues)
 				delayTime = 0.0
-				if executeTimes > 1 and delayTimeStr != "":
+				if executeTimes > 1 and delayTimeStr != u'':
 					delayTime = float(delayTimeStr)
 			
 				# create and add the command to the queue

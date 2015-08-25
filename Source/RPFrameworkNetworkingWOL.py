@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkNetworkingWOL by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkNetworkingWOL by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Classes that handles send Wake-On-LAN (WOL) requests over the network
 #	
 #	Version 1.0.2 [11-15-2013]:
@@ -31,7 +31,7 @@ def sendWakeOnLAN(macaddress):
         sep = macaddress[2]
         macaddress = macaddress.replace(sep, '')
     else:
-        raise ValueError('Incorrect MAC address format')
+        raise ValueError(u'Incorrect MAC address format')
  
     # Pad the synchronization stream.
     data = ''.join(['FFFFFFFFFFFF', macaddress * 20])

@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkNetworkingUPnP by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkNetworkingUPnP by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Classes that handle various aspects of Universal Plug and Play protocols such as
 #	discovery of devices.
 #	
 #	Version 1.0.0 [10-18-2013]:
 #		Initial release of the plugin framework
+#	Version 1.0.17:
+#		Added unicode support / proper string conversions
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -18,6 +20,8 @@
 import socket
 import httplib
 import StringIO
+import RPFrameworkUtils
+
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -38,28 +42,28 @@ class SSDPResponse(object):
 		r = httplib.HTTPResponse(self._FakeSocket(response))
 		r.begin()
 		
-		self.location = ""
-		self.usn = ""
-		self.st = ""
-		self.server = ""
-		self.cache = ""
+		self.location = u''
+		self.usn = u''
+		self.st = u''
+		self.server = u''
+		self.cache = u''
 		
 		if r.getheader("location") is not None:
-			self.location = r.getheader("location")
+			self.location = RPFrameworkUtils.to_unicode(r.getheader("location"))
 			
 		if r.getheader("usn") is not None:
-			self.usn = r.getheader("usn")
+			self.usn = RPFrameworkUtils.to_unicode(r.getheader("usn"))
 	
 		if r.getheader("st") is not None:
-			self.st = r.getheader("st")
+			self.st = RPFrameworkUtils.to_unicode(r.getheader("st"))
 	
 		if r.getheader("server") is not None:
-			self.server = r.getheader("server")
+			self.server = RPFrameworkUtils.to_unicode(r.getheader("server"))
 		
 		if r.getheader("cache-control") is not None:
 			try:
-				cacheControlHeader = r.getheader("cache-control")
-				cacheControlHeader = cacheControlHeader.split("=")[1]
+				cacheControlHeader = RPFrameworkUtils.to_unicode(r.getheader("cache-control"))
+				cacheControlHeader = cacheControlHeader.split(u'=')[1]
 				self.cache = cacheControlHeader
 			except:
 				pass
@@ -67,7 +71,7 @@ class SSDPResponse(object):
 		self.allHeaders = r.getheaders()
 		
 	def __repr__(self):
-		return "<SSDPResponse(%(location)s, %(st)s, %(usn)s, %(server)s)>" % (self.__dict__) + str(self.allHeaders) + "</SSDPResonse>"
+		return u'<SSDPResponse(%(location)s, %(st)s, %(usn)s, %(server)s)>' % (self.__dict__) + RPFrameworkUtils.to_unicode(self.allHeaders) + u'</SSDPResonse>'
 
 
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -80,10 +84,10 @@ class SSDPResponse(object):
 def uPnPDiscover(service, timeout=2, retries=1):
     group = ("239.255.255.250", 1900)
     message = "\r\n".join([
-        'M-SEARCH * HTTP/1.1',
-        'HOST: ' + group[0] + ':' + str(group[1]),
-        'MAN: "ssdp:discover"',
-        'ST: ' + service,'MX: 3','',''])
+        "M-SEARCH * HTTP/1.1",
+        "HOST: " + group[0] + ":" + RPFrameworkUtils.to_str(group[1]),
+        "MAN: ""ssdp:discover""",
+        "ST: " + service,"MX: 3","",""])
     socket.setdefaulttimeout(timeout)
     responses = {}
     for _ in range(retries):

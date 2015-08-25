@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkThread by RogueProeliator <rp@rogueproeliator.com>
+# RPFrameworkThread by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Class for all RogueProeliator's device threads; supports cancellation via raising an
 #	exception in the thread
 #	
 #	Version 1.0.8 [5-2014]:
 #		Initial release of the thread to the framework
+#	Version 1.0.17:
+#		Changed strings to unicode strings
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -21,15 +23,15 @@ import threading
 #/////////////////////////////////////////////////////////////////////////////////////////
 def _async_raise(tid, exctype):
 	if not inspect.isclass(exctype):
-		raise TypeError("Only types can be raised (not instances)")
+		raise TypeError(u'Only types can be raised (not instances)')
 	res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
 	if res == 0:
-		raise ValueError("invalid thread id")
+		raise ValueError(u'invalid thread id')
 	elif res != 1:
 		# if it returns a number greater than one, you're in trouble, 
 		# and you should call it again with exc=NULL to revert the effect
 		ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
-		raise SystemError("PyThreadState_SetAsyncExc failed")
+		raise SystemError(u'PyThreadState_SetAsyncExc failed')
         
 
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -49,10 +51,10 @@ class RPFrameworkThread(threading.Thread):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def _get_my_tid(self):
 		if not self.isAlive():
-			raise threading.ThreadError("The thread is not active")
+			raise threading.ThreadError(u'The thread is not active')
 
 		# check to see if we have the ID already retrieved/cached
-		if hasattr(self, "_thread_id"):
+		if hasattr(self, u'_thread_id'):
 			return self._thread_id
         
 		# the id is not yet cached to the class... attempt to find it now in the list
@@ -63,7 +65,7 @@ class RPFrameworkThread(threading.Thread):
 				return tid
         
 		# we could not find the thread's ID
-		raise AssertionError("Could not determine the thread's id")
+		raise AssertionError(u'Could not determine the thread''s id')
     
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine raises an exception of the given type within the thread's context

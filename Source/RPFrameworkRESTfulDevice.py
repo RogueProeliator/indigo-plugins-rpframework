@@ -35,6 +35,7 @@
 #		Changed the DOWNLOADFILE/DOWNLOADIMAGE operations to use requests
 #		Changed command parameters for all requests to allow additional options
 #		Added new handleDeviceTextResponse routine to handle response
+#		Added requests' response object to the restful error call
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -288,7 +289,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 									self.hostPlugin.logDebugMessage(command.commandName + u' command response processing completed', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 									
 							elif responseObj.status_code == 401:
-								self.handleRESTfulError(command, u'Unauthorized')
+								self.handleRESTfulError(command, u'401 - Unauthorized', responseObj)
 							 	
 						except Exception, e:
 							self.handleRESTfulError(command, e)
@@ -456,7 +457,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	# This routine will handle an error as thrown by the REST call... it allows 
 	# descendant classes to do their own processing
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-		
-	def handleRESTfulError(self, rpCommand, err):
+	def handleRESTfulError(self, rpCommand, err, response=None):
 		if rpCommand.commandName == CMD_RESTFUL_PUT or rpCommand.commandName == CMD_RESTFUL_GET:
 			indigo.server.log(u'An error occurred executing the GET/PUT request (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err), isError=True)
 		else:

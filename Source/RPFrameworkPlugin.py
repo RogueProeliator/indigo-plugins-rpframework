@@ -61,6 +61,7 @@
 #		Added unicode support
 #		Added support for device parent properties during substitution
 #		Added "requests" module to framework from source on GitHub
+#		Added ability to dump device details to event log as part of the DEBUG menu items
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -420,6 +421,24 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			# build the debug menu section... this will always include the debug toggle but
 			# may include additional commands based upon type
 			debugMenuOptions = u'<MenuItem id="toggleDebug"><Name>Toggle Debugging On/Off</Name><CallbackMethod>toggleDebugEnabled</CallbackMethod></MenuItem>'
+			debugMenuOptions += u"""<MenuItem id="debugDumpDeviceDetails">
+										<Name>Log Device Details</Name>
+										<CallbackMethod>dumpDeviceDetailsToLog</CallbackMethod>
+										<ButtonTitle>Output</ButtonTitle>
+										<ConfigUI>
+											<Field id="dumpDeviceDetailsToLog_Title" type="label" fontColor="darkGray">
+												<Label>DEVICE DETAILS DEBUG</Label>
+											</Field>
+											<Field id="dumpDeviceDetailsToLog_TitleSeparator" type="separator" />
+											<Field type="label" id="dumpDeviceDetailsToLogInstructions" fontSize="small">
+												<Label>This function will dump the details of a plugin device to the Indigo Event Log to aid in debugging and forum posts.</Label>
+											</Field>
+											<Field id="devicesToDump" type="list">
+												<Label>Devices to Log:</Label>
+												<List class="indigo.devices" filter="self" />
+											</Field>
+										</ConfigUI>
+									</MenuItem>"""
 			if self.getGUIConfigValue(GUI_CONFIG_PLUGINSETTINGS, GUI_CONFIG_PLUGIN_DEBUG_SHOWUPNPOPTION, u'False') == u'True':
 				debugMenuOptions += u"""<MenuItem id="debugUPNPDevicesFound">
 											<Name>Perform UPnP Search</Name>
@@ -1192,6 +1211,24 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			indigo.server.log(u'Created UPnP results temporary file at ' + RPFrameworkUtils.to_unicode(tempFilename))
 		except:
 			self.exceptionLog();
+	
+	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	# This routine will be called whenever the user has chosen to dump the device details
+	# to the event log via the menuitem action
+	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	def dumpDeviceDetailsToLog(self, valuesDict, typeId):
+		errorsDict = indigo.Dict()
+		devicesToDump = valuesDict.get(u'devicesToDump', None)
+		
+		if devicesToDump is None or len(devicesToDump) == 0:
+			errorsDict[u'devicesToDump'] = u'Please select one or more devices'
+			return (False, valuesDict, errorsDict)
+		else:
+			for deviceId in devicesToDump:
+				indigo.server.log(u'Dumping details for DeviceID: ' + RPFrameworkUtils.to_unicode(deviceId))
+				dumpDev = indigo.devices[int(deviceId)]
+				indigo.server.log(unicode(dumpDev))
+			return (True, valuesDict, errorsDict)
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine provides the callback for devices based off a Dimmer... since the call

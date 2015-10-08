@@ -19,6 +19,10 @@
 #		Set error state on server when a connection times out or fails
 #	Version 1.0.17:
 #		Added unicode support
+#		Changed exception logging to use the logErrorMessage routine
+#		Added ability to specify 0 as the polling interval (<= 0 turns off polling)
+#	Version 1.0.18:
+#		Changed error trapping to include EOFError as a re-connectable error
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -193,7 +197,8 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice.RPFrameworkDevice):
 						if updateStatusPollerActionId != u'':
 							self.hostPlugin.logDebugMessage(u'Executing full status update request...', RPFrameworkPlugin.DEBUGLEVEL_MED)
 							self.hostPlugin.executeAction(None, indigoActionId=updateStatusPollerActionId, indigoDeviceId=self.indigoDevice.id, paramValues=None)
-							updateStatusPollerNextRun = time.time() + updateStatusPollerInterval
+							if updateStatusPollerInterval > 0:
+								updateStatusPollerNextRun = time.time() + updateStatusPollerInterval
 						else:
 							self.hostPlugin.logDebugMessage(u'Ignoring status update request, no action specified to update device status', RPFrameworkPlugin.DEBUGLEVEL_LOW)
 					
@@ -268,7 +273,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice.RPFrameworkDevice):
 			# the system is shutting down communications... we can kill access now by allowing
 			# the thread to expire
 			pass
-		except socket.timeout:
+		except (socket.timeout, EOFError):
 			# this is a standard timeout/disconnect
 			if self.failedConnectionAttempts == 0 or self.hostPlugin.debug == True:
 				indigo.server.log(u'Connection timed out for device ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id), isError=True)
@@ -299,7 +304,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice.RPFrameworkDevice):
 			self.scheduleReconnectionAttempt()
 		except:
 			self.indigoDevice.setErrorStateOnServer(u'Error')
-			self.hostPlugin.exceptionLog()
+			self.hostPlugin.logErrorMessage(u'Error during background processing')
 		finally:			
 			# update the device's connection state to no longer connected...
 			self.hostPlugin.logDebugMessage(u'Closing connection to device', RPFrameworkPlugin.DEBUGLEVEL_LOW)

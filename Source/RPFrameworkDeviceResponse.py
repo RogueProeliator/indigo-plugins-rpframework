@@ -13,6 +13,9 @@
 #			crashing on error
 #	Version 1.0.17:
 #		Added unicode support
+#		Change exception logging to new plugin-object based error logging
+#	Version 1.0.18:
+#		Added support for updateExecCondition specification on response processing effects
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -120,6 +123,14 @@ class RPFrameworkDeviceResponse(object):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def executeEffects(self, responseObj, rpCommand, rpDevice, rpPlugin):
 		for effect in self.matchResultEffects:
+			# first we need to determine if this effect should be executed (based upon a condition; by default all
+			# effects will be executed!)
+			if effect.updateExecCondition != None and effect.updateExecCondition != u'':
+				# this should eval to a boolean value
+				if eval(rpPlugin.substituteIndigoValues(effect.updateExecCondition, rpDevice, dict())) == False:
+					rpPlugin.logDebugMessage(u'Execute condition failed for response, skipping execution for effect: ' + effect.effectType, RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+					continue
+		
 			# processing for this effect is dependent upon the type
 			try:
 				if effect.effectType == RESPONSE_EFFECT_UPDATESTATE:
@@ -167,8 +178,7 @@ class RPFrameworkDeviceResponse(object):
 					rpPlugin.logDebugMessage(u'Effect execution: Calling function ' + effect.updateParam, RPFrameworkPlugin.DEBUGLEVEL_MED)
 					eval(u'rpDevice.' + effect.updateParam + u'(responseObj, rpCommand)')
 			except:
-				indigo.server.log(u'Error executing effect for device id ' + RPFrameworkUtils.to_unicode(rpDevice.indigoDevice.id), isError=True)
-				rpPlugin.exceptionLog()
+				rpPlugin.logErrorMessage(u'Error executing effect for device id ' + RPFrameworkUtils.to_unicode(rpDevice.indigoDevice.id))
 				
 	
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -188,10 +198,12 @@ class RPFrameworkDeviceResponseEffect(object):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor allows passing in the data that makes up the response object
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def __init__(self, effectType, updateParam, updateValueFormatString=u'', updateValueFormatExString=u'', evalUpdateValue=False):
+	def __init__(self, effectType, updateParam, updateValueFormatString=u'', updateValueFormatExString=u'', evalUpdateValue=False, updateExecCondition=None):
 		self.effectType = effectType
 		self.updateParam = updateParam
 		self.updateValueFormatString = updateValueFormatString
 		self.updateValueFormatExString = updateValueFormatExString
 		self.evalUpdateValue = evalUpdateValue
+		self.updateExecCondition = updateExecCondition
+		
 		

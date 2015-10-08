@@ -18,6 +18,7 @@
 #		via a call to stateListOrDisplayStateIdChanged
 #	Version 1.0.17:
 #		Added unicode support
+#		Changed error messages to the new plugin-based logErrorMessage
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -191,9 +192,7 @@ class RPFrameworkDevice(object):
 				self.hostPlugin.pluginCommandQueue.put(RPFrameworkCommand.RPFrameworkCommand(RPFrameworkCommand.CMD_DEVICE_RECONNECT, commandPayload=(self.indigoDevice.id, self.deviceInstanceIdentifier, reconnectAttemptTime)))
 				self.hostPlugin.logDebugMessage(u'Reconnection attempt scheduled for ' + RPFrameworkUtils.to_unicode(reconnectSeconds) + u' seconds', RPFrameworkPlugin.DEBUGLEVEL_MED)
 		except e:
-			indigo.server.log(u'Failed to schedule reconnection attempt to device: ' + RPFrameworkUtils.to_unicode(e), isError=True)
-			if self.debug:
-				self.hostPlugin.exceptionLog()			
+			self.hostPlugin.logErrorMessage(u'Failed to schedule reconnection attempt to device')			
 		
 		
 	#/////////////////////////////////////////////////////////////////////////////////////

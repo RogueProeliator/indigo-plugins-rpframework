@@ -62,6 +62,10 @@
 #		Added support for device parent properties during substitution
 #		Added "requests" module to framework from source on GitHub
 #		Added ability to dump device details to event log as part of the DEBUG menu items
+#		Added logErrorMessage function to log friendly error messages and details for debug
+#		Changed error messages to use the new logErrorMessage function
+#	Version 1.0.18:
+#		Added ability to specify updateExecCondition on effects within response nodes
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -301,8 +305,13 @@ class RPFrameworkPlugin(indigo.PluginBase):
 										
 										effectValueEvalResult = RPFrameworkUtils.to_unicode(effectDefn.get("evalResult")).lower() == "true"
 										
-										self.logDebugMessage(u'Found response effect: Type=' + effectType + u'; Param: ' + effectUpdateParam + u'; ValueFormat=' + RPFrameworkUtils.to_unicode(effectValueFormat) + u'; ValueFormatEx=' + effectValueFormatExVal + u'; Eval=' + RPFrameworkUtils.to_unicode(effectValueEvalResult), DEBUGLEVEL_HIGH)
-										devResponseDefn.addResponseEffect(RPFrameworkDeviceResponse.RPFrameworkDeviceResponseEffect(effectType, effectUpdateParam, effectValueFormat, effectValueFormatExVal, effectValueEvalResult))
+										effectExecCondition = u''
+										effectExecConditionNode = effectDefn.find("updateExecCondition")
+										if effectExecConditionNode != None:
+											effectExecCondition = RPFrameworkUtils.to_unicode(effectExecConditionNode.text)
+										
+										self.logDebugMessage(u'Found response effect: Type=' + effectType + u'; Param: ' + effectUpdateParam + u'; ValueFormat=' + RPFrameworkUtils.to_unicode(effectValueFormat) + u'; ValueFormatEx=' + effectValueFormatExVal + u'; Eval=' + RPFrameworkUtils.to_unicode(effectValueEvalResult) + u'; Condition=' + effectExecCondition, DEBUGLEVEL_HIGH)
+										devResponseDefn.addResponseEffect(RPFrameworkDeviceResponse.RPFrameworkDeviceResponseEffect(effectType, effectUpdateParam, effectValueFormat, effectValueFormatExVal, effectValueEvalResult, effectExecCondition))
 								
 								# add the definition to the plugin's list of response definitions
 								self.addDeviceResponseDefinition(indigoDeviceId, devResponseDefn)
@@ -350,8 +359,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 						self.addIndigoAction(rpAction)
 				self.logDebugMessage(u'Successfully completed processing of RPFrameworkConfig.xml file', DEBUGLEVEL_LOW)
 			except:
-				indigo.server.log(u'Plugin Config: Error reading RPFrameworkConfig.xml file at: ' + pluginConfigPath + ':', isError=True)
-				self.exceptionLog()
+				self.logErrorMessage(u'Plugin Config: Error reading RPFrameworkConfig.xml file at: ' + pluginConfigPath)
 		else:
 			self.logDebugMessage(u'RPFrameworkConfig.xml not found at ' + pluginConfigPath + u', skipping processing', DEBUGLEVEL_LOW)
 			
@@ -1069,7 +1077,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				menuItems.append((networkDevice.location, networkDevice.server))
 			return menuItems
 		except:
-			self.exceptionLog()
+			self.logErrorMessage(u'Error parsing UPNP devices found on the network')
 			return []
 	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -1210,7 +1218,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			call(["open", tempFilename])
 			indigo.server.log(u'Created UPnP results temporary file at ' + RPFrameworkUtils.to_unicode(tempFilename))
 		except:
-			self.exceptionLog();
+			self.logErrorMessage(u'Error generating UPnP report')
 	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will be called whenever the user has chosen to dump the device details
@@ -1346,6 +1354,17 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				indigo.server.log(debugMessage)
 			else:
 				self.debugLog(debugMessage) 
+		
+	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	# This routine will output an error message to the user and, if set, a detailed
+	# error message for the crash
+	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-		
+	def logErrorMessage(self, errorMessage):
+		indigo.server.log(errorMessage, isError=True)
+		if self.debug == True:
+			self.exceptionLog()
+		else:
+			indigo.server.log(u'Turn on debugging to get additional error details.', isError=True)
 	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will update the enumeratedDevices list of devices from the uPNP
@@ -1442,9 +1461,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			
 			return dbConn
 		except:
-			indigo.server.log(u'Error establishing database connection', isError=True)
-			if self.debug == True:			
-				self.exceptionLog()
+			self.logErrorMessage(u'Error establishing database connection')
 			
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will be called in order to create the tables for the plugin... each

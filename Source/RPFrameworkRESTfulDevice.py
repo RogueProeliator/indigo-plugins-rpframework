@@ -36,6 +36,8 @@
 #		Changed command parameters for all requests to allow additional options
 #		Added new handleDeviceTextResponse routine to handle response
 #		Added requests' response object to the restful error call
+#		Changed error logging to the new plugin-based logErrorMessage routine
+#		Implemented POST operation via Requests
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -192,9 +194,9 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 						try:
 							RPFrameworkNetworkingWOL.sendWakeOnLAN(command.commandPayload)
 						except:
-							self.hostPlugin.exceptionLog()
+							self.hostPlugin.logErrorMessage(u'Failed to send Wake-on-LAN packet')
 						
-					elif command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+					elif command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_RESTFUL_PUT or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
 						try:
 							self.hostPlugin.logDebugMessage(u'Processing GET operation: ' + RPFrameworkUtils.to_unicode(command.commandPayload), RPFrameworkPlugin.DEBUGLEVEL_MED)
 							
@@ -210,6 +212,9 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							# [5] => download filename/path
 							# [6] => image resize width
 							# [7] => image resize height
+							#
+							# CMD_RESTFUL_PUT
+							# [5] => data to post as the body (if any, may be blank)
 							commandPayloadList = command.getPayloadAsList()
 							fullGetUrl = commandPayloadList[0] + u'://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_unicode(deviceHTTPAddress[1]) + commandPayloadList[1]
 							
@@ -233,6 +238,11 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							# execute the URL fetching depending upon the method requested
 							if command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
 								responseObj = requests.get(fullGetUrl, auth=authenticationParam, headers=customHeaders, verify=False)
+							elif command.commandName == CMD_RESTFUL_PUT:
+								dataToPost = None
+								if len(commandPayloadList) >= 6:
+									dataToPost = commandPayloadList[5]
+								responseObj = requests.post(fullGetUrl, auth=authenticationParam, headers=customHeaders, verify=False, data=dataToPost)
 								
 							# if the network command failed then allow the error processor to handle the issue
 							if responseObj.status_code == 200:
@@ -274,8 +284,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 														subprocess.Popen(resizeCommandLine, shell=True)
 														self.hostPlugin.logDebugMessage(saveLocation + u' resized via sip shell command', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
 													except:
-														indigo.server.log(u'Error resizing image via sips:', isError=True)
-														self.hostPlugin.exceptionLog()
+														self.hostPlugin.logErrorMessage(u'Error resizing image via sips')
 										finally:
 											if not localFile is None:
 												localFile.close()					
@@ -293,38 +302,6 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							 	
 						except Exception, e:
 							self.handleRESTfulError(command, e)
-							if self.hostPlugin.debug == True:
-								self.hostPlugin.exceptionLog()
-						
-					elif command.commandName == CMD_RESTFUL_PUT:
-						try:
-							# this is a put operation... create an HTTP GET or POST operation to be sent to
-							# the device
-							#requestHttpVerb = u'GET'
-							#if command.commandName == CMD_RESTFUL_PUT:
-							#	requestHttpVerb = u'POST'
-							#self.hostPlugin.logDebugMessage(u'Processing ' + requestHttpVerb + u' operation: ' + RPFrameworkUtils.to_unicode(command.commandPayload), RPFrameworkPlugin.DEBUGLEVEL_MED)
-			
-							#conn = httplib.HTTPConnection(deviceHTTPAddress[0], int(deviceHTTPAddress[1]))
-							#conn.connect()
-							#conn.putrequest(requestHttpVerb, RPFrameworkUtils.to_str(command.commandPayload))
-							#self.addCustomHTTPHeaders(conn)
-							#conn.endheaders()
-			
-							#responseToREST = conn.getresponse()
-							#responseToRESTText = responseToREST.read()
-							#self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(responseToREST.status) + u'] ' + RPFrameworkUtils.to_unicode(responseToRESTText), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
-			
-							#conn.close()						
-							#self.hostPlugin.logDebugMessage(command.commandName + u' command completed.', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
-							
-							# allow the framework to handle the response...
-							#self.handleDeviceResponse(responseToREST, responseToRESTText, command)
-							pass
-						except Exception, e:
-							self.handleRESTfulError(command, e)
-							if self.hostPlugin.debug == True:
-								self.hostPlugin.exceptionLog()
 						
 					elif command.commandName == CMD_SOAP_REQUEST or command.commandName == CMD_JSON_REQUEST:
 						try:
@@ -365,8 +342,6 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							self.handleDeviceResponse(soapResponse, soapResponseText, command)
 						except Exception, e:
 							self.handleRESTfulError(command, e)
-							if self.hostPlugin.debug == True:
-								self.hostPlugin.exceptionLog()
 					
 					else:
 						# this is an unknown command; dispatch it to another routine which is
@@ -459,7 +434,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-		
 	def handleRESTfulError(self, rpCommand, err, response=None):
 		if rpCommand.commandName == CMD_RESTFUL_PUT or rpCommand.commandName == CMD_RESTFUL_GET:
-			indigo.server.log(u'An error occurred executing the GET/PUT request (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err), isError=True)
+			self.hostPlugin.logErrorMessage(u'An error occurred executing the GET/PUT request (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err))
 		else:
-			indigo.server.log(u'An error occurred processing the SOAP/JSON POST request: (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err), isError=True)		
+			self.hostPlugin.logErrorMessage(u'An error occurred processing the SOAP/JSON POST request: (Device: ' + RPFrameworkUtils.to_unicode(self.indigoDevice.id) + u'): ' + RPFrameworkUtils.to_unicode(err))		
 	

@@ -299,11 +299,15 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 									
 							elif responseObj.status_code == 401:
 								self.handleRESTfulError(command, u'401 - Unauthorized', responseObj)
+							
+							else:
+								self.handleRESTfulError(command, str(responseObj.status_code), responseObj)
 							 	
 						except Exception, e:
-							self.handleRESTfulError(command, e)
+							self.handleRESTfulError(command, e, responseObj)
 						
 					elif command.commandName == CMD_SOAP_REQUEST or command.commandName == CMD_JSON_REQUEST:
+						responseObj = None
 						try:
 							# this is to post a SOAP request to a web service... this will be similar to a restful put request
 							# but will contain a body payload
@@ -312,36 +316,34 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							soapPayloadData = soapPayloadParser.match(command.commandPayload)
 							soapPath = soapPayloadData.group(1).strip()
 							soapAction = soapPayloadData.group(2).strip()
-							soapBody = soapPayloadData.group(3).strip()
-							self.hostPlugin.logDebugMessage(u'Processing SOAP/JSON operation to ' + soapPath, RPFrameworkPlugin.DEBUGLEVEL_MED)
+							soapBody = soapPayloadData.group(3).strip()							
+							fullGetUrl = u'http://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_str(deviceHTTPAddress[1]) + RPFrameworkUtils.to_str(soapPath)
+							self.hostPlugin.logDebugMessage(u'Processing SOAP/JSON operation to ' + fullGetUrl, RPFrameworkPlugin.DEBUGLEVEL_MED)
 
-							conn = httplib.HTTPConnection(deviceHTTPAddress[0], int(deviceHTTPAddress[1]))
-							conn.connect()
-						
-							conn.putrequest("POST", RPFrameworkUtils.to_str(soapPath))
+							customHeaders = {}
+							self.addCustomHTTPHeaders(customHeaders)
 							if command.commandName == CMD_SOAP_REQUEST:
-								conn.putheader("Content-type", "text/xml; charset=\"UTF-8\"")
-								conn.putheader("SOAPAction", "\"" + RPFrameworkUtils.to_str(soapAction) + "\"")
+								customHeaders["Content-type"] = "text/xml; charset=\"UTF-8\""
+								customHeaders["SOAPAction"] = RPFrameworkUtils.to_str(soapAction)
 							else:
-								conn.putheader("Content-type", "application/json")
-							self.addCustomHTTPHeaders(conn)
-							conn.putheader("Content-Length", "%d" % len(soapBody))
-							conn.endheaders()
-						
-							conn.send(RPFrameworkUtils.to_str(soapBody))
-							self.hostPlugin.logDebugMessage(u'Sending SOAP/JSON request:\n' + RPFrameworkUtils.to_str(soapBody), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
-						
-							soapResponse = conn.getresponse()
-							soapResponseText = soapResponse.read()
-							self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(soapResponse.status) + u'] ' + RPFrameworkUtils.to_unicode(soapResponseText), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
-			
-							conn.close()						
-							self.hostPlugin.logDebugMessage(command.commandName + u' command completed.', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+								customHeaders["Content-type"] = "application/json"
 							
-							# allow the framework to handle the response...
-							self.handleDeviceResponse(soapResponse, soapResponseText, command)
+							# execute the URL post to the web service
+							self.hostPlugin.logDebugMessage(u'Sending SOAP/JSON request:\n' + RPFrameworkUtils.to_str(soapBody), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+							responseObj = requests.post(fullGetUrl, headers=customHeaders, verify=False, data=RPFrameworkUtils.to_str(soapBody))
+							
+							if responseObj.status_code == 200:
+								# handle this return as a text-based return
+								self.hostPlugin.logDebugMessage(u'Command Response: [' + RPFrameworkUtils.to_unicode(responseObj.status_code) + u'] ' + RPFrameworkUtils.to_unicode(responseObj.text), RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+								self.hostPlugin.logDebugMessage(command.commandName + u' command completed; beginning response processing', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+								self.handleDeviceTextResponse(responseObj, command)
+								self.hostPlugin.logDebugMessage(command.commandName + u' command response processing completed', RPFrameworkPlugin.DEBUGLEVEL_HIGH)
+								
+							else:
+								self.handleRESTfulError(command, str(responseObj.status_code), responseObj)
+
 						except Exception, e:
-							self.handleRESTfulError(command, e)
+							self.handleRESTfulError(command, e, responseObj)
 					
 					else:
 						# this is an unknown command; dispatch it to another routine which is
@@ -411,14 +413,6 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	# response objects defined for this device type. For telnet this will always be
 	# a text string
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def handleDeviceResponse(self, responseObj, responseText, rpCommand):
-		# loop through the list of response definitions defined in the (base) class
-		# and determine if any match
-		for rpResponse in self.hostPlugin.getDeviceResponseDefinitions(self.indigoDevice.deviceTypeId):
-			if rpResponse.isResponseMatch(responseText, rpCommand, self, self.hostPlugin):
-				self.hostPlugin.logDebugMessage(u'Found response match: ' + RPFrameworkUtils.to_unicode(rpResponse.responseId), RPFrameworkPlugin.DEBUGLEVEL_MED)
-				rpResponse.executeEffects(responseText, rpCommand, self, self.hostPlugin)
-	
 	def handleDeviceTextResponse(self, responseObj, rpCommand):
 		# loop through the list of response definitions defined in the (base) class
 		# and determine if any match

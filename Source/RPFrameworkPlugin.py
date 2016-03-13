@@ -66,6 +66,8 @@
 #		Changed error messages to use the new logErrorMessage function
 #	Version 1.0.18:
 #		Added ability to specify updateExecCondition on effects within response nodes
+#	Version 1.0.19:
+#		Changed call to determine RPFrameworkConfig.xml file to use the os.getcwd() call
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -216,7 +218,9 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def parseRPFrameworkConfig(self, pluginName):
 		indigoBasePath = indigo.server.getInstallFolderPath()
-		pluginConfigPath = os.path.join(indigoBasePath, "Plugins/" + pluginName + ".indigoPlugin/Contents/Server Plugin/RPFrameworkConfig.xml")
+		pluginBasePath = os.getcwd()
+		pluginConfigPath = os.path.join(pluginBasePath, "RPFrameworkConfig.xml")
+		
 		if os.path.exists(pluginConfigPath):
 			self.logDebugMessage(u'Beginning processing of RPFrameworkConfig.xml file', DEBUGLEVEL_MED)
 			try:

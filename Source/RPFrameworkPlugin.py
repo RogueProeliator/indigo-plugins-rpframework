@@ -6,45 +6,53 @@
 # 	Base class for all RogueProeliator's plugins for Perceptive Automation's Indigo
 #	home automation software.
 #	
-#	Version 1.0.0 [10-18-2013]:
+#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# 	SOFTWARE.
+#
+#	Version 0 [10-18-2013]:
 #		Initial release of the plugin framework
-#	Version 1.0.1
+#	Version 1
 #		Fixed default value of debug in case missing in upgraded devices (default Medium)
-#	Version 1.0.2
+#	Version 2
 #		Added SOAP operations to the RESTfulDevice className
 #		Better set default value for the debug level (in plugin.py)
-#	Version 1.0.3 [11-18-2013]:
+#	Version 3 [11-18-2013]:
 #		Added Wake-On-LAN module for network devices
 #		Added functions to aid in finding/selection uPNP devices
 #		Added plugin config update when device dialog closes
-#	Version 1.0.4:
+#	Version 4:
 #		Added support for child devices
 #		Added support for execute conditions on action commands
-#	Version 1.0.5:
+#	Version 5:
 #		Swapped deviceStartComm order to assign managed device to array prior to
 #			initiating communications
-#	Version 1.0.7:
+#	Version 7:
 #		Changed substitute to support plugin preferences with a "pp" prefix
 #		Added database support
 #		Added plugin-level guiConfiguration settings, used with GUI_CONFIG_PLUGINSETTINGS
-#	Version 1.0.8 [5/2014]:
+#	Version 8 [5/2014]:
 #		Added Plugin Config UI parameter validation
 #		Added plugin-level command queue processing; moved update check to here
-#	Version 1.0.9:
+#	Version 9:
 #		Added ability to handle unknown commands for the plugin "downstream"
-#	Version 1.0.10:
+#	Version 10:
 #		Added parameter to plugin commands that allow re-queuing additional commands for
 #		non-immediate execution
-#	Version 1.0.11:
+#	Version 11:
 #		Added callback functions to support dimmer-based devices (passes action call to the
 #		device like a normal action callback
-#	Version 1.0.12:
+#	Version 12:
 #		Added support for shorter wait times in devices after a queued command executes
 #		Added support for uiValue when updating states from effect processing
-#	Version 1.0.13:
+#	Version 13:
 #		Added support for substituting Indigo List type property values (into string as action
 #		comma-delimited string)
-#	Version 1.0.14:
+#	Version 14:
 #		Switched init routine to complete RPFramework init prior to base class init
 #		Added template-replace of MenuItems.xml for standard features
 #		Added option to install UPnP debug tools to menu items
@@ -52,22 +60,25 @@
 #		Added writePluginReport for writing out standard reports
 #		Added trigger processing to the base plugin
 #		Removed initial version check on startup - let the concurrent thread do that!
-#	Version 1.0.15:
+#	Version 15:
 #		Added the parameter type ParamTypeOSFilePath to validate an existing filename
-#	Version 1.0.16:
+#	Version 16:
 #		Fixed error when an action failed to validate (when executed through script)
 #		Updated telnet devices to set the error state on the server when timing out / failed connection
-#	Version 1.0.17:
+#	Version 17:
 #		Added unicode support
 #		Added support for device parent properties during substitution
 #		Added "requests" module to framework from source on GitHub
 #		Added ability to dump device details to event log as part of the DEBUG menu items
 #		Added logErrorMessage function to log friendly error messages and details for debug
 #		Changed error messages to use the new logErrorMessage function
-#	Version 1.0.18:
+#	Version 18:
 #		Added ability to specify updateExecCondition on effects within response nodes
-#	Version 1.0.19:
+#	Version 19:
 #		Changed call to determine RPFrameworkConfig.xml file to use the os.getcwd() call
+#	Version 20:
+#		Changed updater to use the GitHub updater method
+#		Updated init routine to lower logging level of requests library
 #
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -78,6 +89,7 @@
 import indigo
 import os
 import re
+import requests
 import RPFrameworkCommand
 from RPFrameworkIndigoAction import RPFrameworkIndigoActionDfn
 import RPFrameworkDeviceResponse 
@@ -92,6 +104,9 @@ from urllib2 import urlopen
 import xml.etree.ElementTree
 import threading
 import RPFrameworkUtils
+from RPFrameworkUpdater import GitHubPluginUpdater
+import ConfigParser
+import logging
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Constants and configuration variables
@@ -148,7 +163,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	# Constructor called once upon plugin class creation; setup the basic functionality
 	# common to all plugins based on the framework
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs, updateCheckUrl, daysBetweenUpdateChecks=1, managedDeviceClassModule=None):
+	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs, daysBetweenUpdateChecks=1, managedDeviceClassModule=None):
 		# flag the plugin as undergoing initialization so that we know the full
 		# indigo plugin is not yet available
 		self.pluginIsInitializing = True
@@ -192,9 +207,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		self.pluginCommandQueue = Queue.Queue()
 		
 		# setup the plugin update checker... it will be disabled if the URL is empty
-		self.updateVersionFileUrl = updateCheckUrl
-		self.updateVersionAvailable = u''
-		self.updateVersionIsNew = False
+		self.updateChecker = GitHubPluginUpdater(self)
 		self.secondsBetweenUpdateChecks = daysBetweenUpdateChecks * 86400
 		self.nextUpdateCheck = time.time()
 		
@@ -210,6 +223,11 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		self.pluginIsInitializing = False
 		self.debug = pluginPrefs.get(u'showDebugInfo', False)
+		
+		# reduce the logging level of the requests library so it doesn't flood the Indigo Log
+		# with unnecessary information
+		logging.getLogger("requests").setLevel(logging.WARNING)
+		logging.getLogger("urllib3").setLevel(logging.WARNING)
 	
 	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -502,14 +520,17 @@ class RPFrameworkPlugin(indigo.PluginBase):
 													<Label>A new version of the plugin is available for download. Please visit the forums for information.</Label>
 												</Field>
 												<Field id="versionCheckLaunchHelpUrl" type="button" visibleBindingId="versionCheckResults" visibleBindingValue="1">
-													<Title>Go to Download</Title>
-													<CallbackMethod>launchForumURL</CallbackMethod>
+													<Title>Download Update</Title>
+													<CallbackMethod>initiateUpdateDownload</CallbackMethod>
 												</Field>
 												<Field id="versionCheckUpdateCurrentMsg" type="label" alignWithControl="true" fontColor="black" visibleBindingId="versionCheckResults" visibleBindingValue="2">
 													<Label>Your plugin is currently up-to-date; thanks for checking!</Label>
 												</Field>
 												<Field id="versionCheckUpdateErrorMsg" type="label" alignWithControl="true" fontColor="red" visibleBindingId="versionCheckResults" visibleBindingValue="3">
 													<Label>An error was encountered while checking your plugin version. Please try again later.</Label>
+												</Field>
+												<Field id="updateInProgressMsg" type="label" alignWithControl="true" fontColor="blue" visibleBindingId="versionCheckResults" visibleBindingValue="4">
+													<Label>Your download has been initiated; you will get the standard Indigo dialog confirming the plugin update on the server once it is ready.</Label>
 												</Field>
 											</ConfigUI>
 										</MenuItem>"""
@@ -707,6 +728,10 @@ class RPFrameworkPlugin(indigo.PluginBase):
 					elif command.commandName == RPFrameworkCommand.CMD_DEBUG_LOGUPNPDEVICES:
 						# kick off the UPnP discovery and logging now
 						self.logUPnPDevicesFoundProcessing()
+						
+					elif command.commandName == RPFrameworkCommand.CMD_DOWNLOAD_UPDATE:
+						# process a request to download the latest version
+						self.updateChecker.update()
 					
 					else:
 						# allow a base class to process the command
@@ -786,126 +811,70 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def checkVersionNow(self):
 		self.logDebugMessage(u'Version check initiated', DEBUGLEVEL_MED)
-		self.updateVersionAvailable = u''
-		self.updateVersionIsNew = False
-		if self.updateVersionFileUrl == u'':
-			indigo.server.log(u'Updater Error: The Version File Url is empty', isError=True)
-
+		
 		# save the last check time (now) in the plugin's config and our class variable
 		timeNow = time.time()
 		self.pluginPrefs[u'updaterLastCheck'] = timeNow
 		self.nextUpdateCheck = timeNow + self.secondsBetweenUpdateChecks
 
-		# get the current plugin version
-		myVersion = str(self.pluginVersion)
-		self.logDebugMessage(u'Version File Url:%s' % self.updateVersionFileUrl, DEBUGLEVEL_HIGH)
-		socket.setdefaulttimeout(3)
-
-		# attempt to download the version file
-		try:
-			f = urlopen(self.updateVersionFileUrl)
-		except:
-			indigo.server.log(u'Updater Error: Unable to retrieve the latest plugin version', isError=True)
-			return
-
-		# parse the version file that was retrieved... this is in a standard format
-		# as exampled below:
-		# 		Version: 1.3.1
-		# 		EmailSubject: DSC Alarm Indigo Plugin Update
-		# 		EmailBody: The DSC Alarm Plugin you are using with Indigo has been updated.
-		#
-		# 		The changes are:
-		# 		- Change 1
-		# 		- Change 2
-		#
-		# 		The update can be downloaded at the link below.
-		# 		http://www.frightideas.com/hobbies/dscAlarm/DSC_Alarm_Plugin.zip
-		#
-		# 		This email was sent to you by Indigo at the request of the plugin.  You will
-		# 		only be emailed once per release.  To disable these emails see the plugin's config.
-		try:
-			lines = RPFrameworkUtils.to_unicode(f.read()).split(u'\n')
-			if lines[0].startswith(u'Version:'):
-				latestVersion = lines[0][8:].strip()
-			else:
-				self.logDebugMessage(u'Updater Error: The version file does not start with "Version:"', DEBUGLEVEL_MED)
-				indigo.server.log(u'Updater Error: There was an error parsing the server''s version file', isError=True)
-				return
-		except:
-			indigo.server.log(u'Updater Error: Error parsing the server''s verson file', isError=True)
-			return
-			
-		# save the information obtained from the file into variables that we can
-		# use in displaying information to the user
-		self.updateVersionAvailable = latestVersion
-
-		# compare the version in the server file to the current version
-		myVersionComponents = re.match(u'v{0,1}(\d+)\.(\d+)\.(\d+)', myVersion, re.I)
-		latestVersionComponents = re.match(u'v{0,1}(\d+)\.(\d+)\.(\d+)', latestVersion, re.I)
-		if int(myVersionComponents.group(1)) < int(latestVersionComponents.group(1)) or (int(myVersionComponents.group(1)) == int(latestVersionComponents.group(1)) and int(myVersionComponents.group(2)) < int(latestVersionComponents.group(2))) or (int(myVersionComponents.group(1)) == int(latestVersionComponents.group(1)) and int(myVersionComponents.group(2)) == int(latestVersionComponents.group(2)) and int(myVersionComponents.group(3)) < int(latestVersionComponents.group(3))):
-			indigo.server.log(u'You are running v%s. A newer version, v%s is available' % (myVersion, latestVersion), isError=True)
-
-			# flag this version as being new into our class variable
-			self.updateVersionIsNew = True
-			
+		# use the updater to check for an update now
+		updateAvailable = self.updateChecker.checkForUpdate()
+		
+		if updateAvailable:
 			# execute any defined Updates triggers
 			if TRIGGER_UPDATEAVAILABLE_TYPEID in self.indigoEvents:
 				for trigger in self.indigoEvents[TRIGGER_UPDATEAVAILABLE_TYPEID].values():
 					indigo.trigger.execute(trigger)
-		else:
-			indigo.server.log(u'Your plugin version, v%s, is current.' % myVersion, isError=False)
-			return
-			
-		
+					
+			# TODO: Re-enable plugin update email!
+			# if execution made it this far then an update is available and we need to send
+			# the user an update email, if so configured
+			emailAddress = self.pluginPrefs.get(u'updaterEmail', u'')
+			if len(emailAddress) == 0:
+				self.logDebugMessage(u'No email address for updates found in the config', DEBUGLEVEL_HIGH)
 
-		# if execution made it this far then an update is available and we need to send
-		# the user an update email, if so configured
-		emailAddress = self.pluginPrefs.get(u'updaterEmail', u'')
-		if len(emailAddress) == 0:
-			self.logDebugMessage(u'No email address for updates found in the config', DEBUGLEVEL_HIGH)
+			# if there's a checkbox in the config in addition to the email address text box
+			# then let the checkbox decide if we should send emails or not
+			if self.pluginPrefs.get(u'updaterEmailsEnabled', True) is False:
+				emailAddress = u''
 
-		# if there's a checkbox in the config in addition to the email address text box
-		# then let the checkbox decide if we should send emails or not
-		if self.pluginPrefs.get(u'updaterEmailsEnabled', True) is False:
-			emailAddress = u''
+			# if we do not have an email address, or emailing is disabled, then exit
+			if len(emailAddress) == 0:
+				return True
 
-		# if we do not have an email address, or emailing is disabled, then exit
-		if len(emailAddress) == 0:
-			return
+			# get last version Emailed to the user
+			lastVersionEmailed = self.pluginPrefs.get(u'updaterLastVersionEmailed', '0')
 
-		# get last version Emailed to the user
-		lastVersionEmailed = self.pluginPrefs.get(u'updaterLastVersionEmailed', '0')
+			# if we already notified the user of this version then bail so that we don'time
+			# duplicate the notification
+			if lastVersionEmailed == self.updateChecker.latestReleaseFound:
+				self.logDebugMessage(u'Version notification already emailed to the user about this version', DEBUGLEVEL_HIGH)
+				return True
 
-		# if we already notified the user of this version then bail so that we don'time
-		# duplicate the notification
-		if lastVersionEmailed == latestVersion:
-			self.logDebugMessage(u'Version notification already emailed to the user about this version', DEBUGLEVEL_HIGH)
-			return
-
-		# check to be sure the version file contains any email information
-		if (len(lines) == 1) or (u'Email' not in lines[1]):
-			self.logDebugMessage(u'Version notification found no email data in the file', DEBUGLEVEL_HIGH)
-			return
-
-		# parse the rest of the file for the email subject & body information
-		try:
-			if (lines[1].startswith(u'EmailSubject:')) and (lines[2].startswith(u'EmailBody:')):
-				emailSubject = lines[1][13:].strip()
-				emailBody = lines[2][10:].lstrip() + u'\n'
-				emailBody += u'\n'.join(lines[3:]) + u'\n'
-				
-				indigo.server.log(u'Emailing the user about the new version.')
+			# build the email subject and body for sending to the user
+			try:
+				gitHubConfig = ConfigParser.RawConfigParser()
+				gitHubConfig.read('UpdaterConfig.cfg')
+				repositoryName = gitHubConfig.get('repository', 'name')
+				emailSubject = gitHubConfig.get('update-email', 'subject')				
+				versionHistory = requests.get('https://raw.githubusercontent.com/RogueProeliator/' + repositoryName + '/master/VERSION_HISTORY.txt')
 
 				# Save this version as the last one emailed in the prefs
-				self.pluginPrefs[u'updaterLastVersionEmailed'] = latestVersion
+				self.pluginPrefs[u'updaterLastVersionEmailed'] = self.updateChecker.latestReleaseFound
 
-				indigo.server.sendEmailTo(emailAddress, subject=emailSubject, body=emailBody)
-			else:
-				self.logDebugMessage(u'Updater Error: The "EmailSubject:" and "EmailBody:" lines were not found.', DEBUGLEVEL_HIGH)
-				indigo.server.log(u'Updater Error: There was an error parsing email data from the server''s version file.', isError=True)
-		except:
-			indigo.server.log(u'Updater Error: Error parsing the email portion of the server''s verson file.', isError=True)
-			return
+				indigo.server.sendEmailTo(emailAddress, subject=emailSubject, body=versionHistory.text)
+			except:
+				indigo.server.log(u'Updater Error: Error sending update notification.', isError=True)
+				if self.debug:
+					self.exceptionLog()
+				
+			# return true in order to indicate to any caller that an update
+			# was found/processed
+			return True
+			
+		else:
+			# no update was available...
+			return False
 	
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
@@ -958,14 +927,14 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			# we need to run the update during the launch and then show the results to the
 			# user... watch for failures and do not let this go on (must time out) since
 			# the dialog could get killed
-			self.checkVersionNow()
+			updateAvailable = self.checkVersionNow()
 			valuesDict["currentVersion"] = RPFrameworkUtils.to_unicode(self.pluginVersion)
-			valuesDict["latestVersion"] = self.updateVersionAvailable
+			valuesDict["latestVersion"] = self.updateChecker.latestReleaseFound
 			
 			# give the user a "better" message about the current status
-			if self.updateVersionAvailable == u'':
+			if self.updateChecker.latestReleaseFound == u'':
 				valuesDict["versionCheckResults"] = u'3'
-			elif self.updateVersionIsNew == True:
+			elif updateAvailable == True:
 				valuesDict["versionCheckResults"] = u'1'
 			else:
 				valuesDict["versionCheckResults"] = u'2'
@@ -1119,10 +1088,19 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		return True
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	# This routine will kick off a download of the latest version of the plugin via the
+	# GitHub updater
+	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+	def initiateUpdateDownload(self, valuesDict, menuId):
+		self.pluginCommandQueue.put(RPFrameworkCommand.RPFrameworkCommand(RPFrameworkCommand.CMD_DOWNLOAD_UPDATE, commandPayload=None))
+		valuesDict[u'versionCheckResults'] = u'4'
+		return valuesDict
+		
+	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will launch the help URL in a new browser window
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def launchForumURL(self, valuesDict, menuId):
-		supportUrl = emptyQueueProcessingThreadSleepTime = self.getGUIConfigValue(GUI_CONFIG_PLUGINSETTINGS, GUI_CONFIG_PLUGIN_UPDATEDOWNLOADURL, u'http://forums.indigodomo.com/viewforum.php?f=59')
+		supportUrl = self.getGUIConfigValue(GUI_CONFIG_PLUGINSETTINGS, GUI_CONFIG_PLUGIN_UPDATEDOWNLOADURL, u'http://forums.indigodomo.com/viewforum.php?f=59')
 		self.browserOpen(supportUrl)
 		
 		

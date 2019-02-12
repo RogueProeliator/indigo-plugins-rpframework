@@ -92,7 +92,7 @@ class RPFrameworkDeviceResponse(object):
 	def isResponseMatch(self, responseObj, rpCommand, rpDevice, rpPlugin):
 		if self.criteriaFormatString is None or self.criteriaFormatString == u'' or self.matchExpression is None or self.matchExpression == u'':
 			# we only need to look at the action...
-			if self.respondToActionId == u'' or self.respondToActionId == rpCommand.parentAction:
+			if self.respondToActionId == u'' or self.respondToActionId == rpCommand.parentAction.indigoActionId:
 				return True
 			else:
 				return False

@@ -125,7 +125,6 @@ GUI_CONFIG_PLUGINSETTINGS = u'plugin'
 GUI_CONFIG_PLUGIN_COMMANDQUEUEIDLESLEEP = u'pluginCommandQueueIdleSleep'
 GUI_CONFIG_PLUGIN_DEBUG_SHOWUPNPOPTION = u'showUPnPDebug'
 GUI_CONFIG_PLUGIN_DEBUG_UPNPOPTION_SERVICEFILTER = u'UPnPDebugServiceFilter'
-GUI_CONFIG_PLUGIN_UPDATEDOWNLOADURL = u'pluginUpdateURL'
 
 GUI_CONFIG_ADDRESSKEY = u'deviceAddressFormat'
 
@@ -152,7 +151,6 @@ DEBUGLEVEL_NONE = 0		# no .debug() logs will be shown in the Indigo log
 DEBUGLEVEL_LOW = 1		# show .debug() logs in the Indigo log
 DEBUGLEVEL_HIGH = 2		# show .ThreadDebug() log calls in the Indigo log
 
-TRIGGER_UPDATEAVAILABLE_TYPEID = u'pluginUpdateAvailable'
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -230,16 +228,6 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		
 		# create the command queue that will be used at the device level
 		self.pluginCommandQueue = Queue.Queue()
-		
-		# setup the plugin update checker... it will be disabled if the URL is empty or the
-		# Indigo API is 2.1 or above as it will be built in... but it may be configured for
-		# and version
-		self.updateCheckPollEnabled = True
-		if float(indigo.server.apiVersion) > 2.05:
-			self.updateCheckPollEnabled = False
-		self.secondsBetweenUpdateChecks = 86400
-		self.nextUpdateCheck = time.time()
-		self.latestReleaseFound = ''
 		
 		# create plugin-level configuration variables
 		self.pluginConfigParams = []
@@ -653,11 +641,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 					if reQueueCommand == True:
 						self.logger.threaddebug(u'Plugin command queue not yet ready; requeuing for future execution')
 						reQueueCommandsList.append(command)	
-						
-				# arbitrary time to check to see if we need to check for updates...
-				# this shouldn't block unless it is time to check
-				self.pollForAvailableUpdate()	
-				
+							
 				# any commands that did not yet execute should be placed back into the queue
 				for commandToRequeue in reQueueCommandsList:
 					self.pluginCommandQueue.put(commandToRequeue)
@@ -677,8 +661,8 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def handleUnknownPluginCommand(self, rpCommand, reQueueCommandsList):
 		pass
-	
-	
+
+
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	# Indigo definitions helper functions
@@ -697,105 +681,6 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		if not (deviceTypeId in self.deviceResponseDefinitions):
 			self.deviceResponseDefinitions[deviceTypeId] = list()
 		self.deviceResponseDefinitions[deviceTypeId].append(responseDfn)
-		
-		
-		
-	#/////////////////////////////////////////////////////////////////////////////////////
-	# Plugin updater methods... used to check for a new version of the plugin from a URL
-	# based upon work by "berkinet" and "Travis" on the Indigo forums
-	#/////////////////////////////////////////////////////////////////////////////////////
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	# this routine will poll for available updates, performing the check only if the next
-	# check time has elapsed; it is designed such that it may be called however often by
-	# the plugin or devices
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def pollForAvailableUpdate(self):
-		# obtain the current date/time and determine if it is after the previously-calculated
-		# next check run
-		timeNow = time.time()
-		if self.updateCheckPollEnabled and timeNow > self.nextUpdateCheck:
-			self.checkVersionNow()
-			
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	# this routine will do the work of executing a check for a new version... it will do
-	# the request in a synchronous manner, so should be executed from a separate thread
-	# from the GUI thread
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def checkVersionNow(self):
-		self.logger.debug(u'Version check initiated')
-		try:
-			# save the last check time (now) in the plugin's config and our class variable
-			timeNow = time.time()
-			self.pluginPrefs[u'updaterLastCheck'] = timeNow
-			self.nextUpdateCheck = timeNow + self.secondsBetweenUpdateChecks
- 			
- 			current_version_url = "https://api.indigodomo.com/api/v2/pluginstore/plugin-version-info.json?pluginId={}".format(self.pluginId)
-			store_detail_url = "https://www.indigodomo.com/pluginstore/{}/"
-		
-			# GET the url from the servers with a short timeout (avoids hanging the plugin)
-			reply = requests.get(current_version_url, timeout=5)
-			
-			# This will raise an exception if the server returned an error
-			reply.raise_for_status()
-
-			# We now have a good reply so we get the json
-			reply_dict = reply.json()
-			plugin_dict = reply_dict["plugins"][0]
-
-			# Make sure that the 'latestRelease' element is a dict (could be a string for built-in plugins).
-			latest_release = plugin_dict["latestRelease"]
-			if isinstance(latest_release, dict):
-				# update the member variable (this is used for display purposes in dialogs)
-				self.latestReleaseFound = latest_release["number"]
-				self.logger.debug(u'Found version v{} versus current version v{}'.format(latest_release["number"], self.pluginVersion))				
-			
-				# Compare the current version with the one returned in the reply dict
-				if LooseVersion(latest_release["number"]) > LooseVersion(self.pluginVersion):			
-					# if execution made it this far then an update is available and we need to send
-					# the user an update email, if so configured
-					
-					# always alert to the indigo log
-					self.logger.info("A new version of the plugin (v{}) is available at: {}".format(latest_release["number"], store_detail_url.format(plugin_dict["id"])))
-					
-					emailAddress = self.pluginPrefs.get(u'updaterEmail', u'')
-					if len(emailAddress) == 0:
-						self.logger.debug(u'No email address for updates found in the config')
-						return True
-					else:
- 						# if there's a checkbox in the config in addition to the email address text box
-						# then let the checkbox decide if we should send emails or not
-						if self.pluginPrefs.get(u'updaterEmailsEnabled', True) is False:
-							return True
-
- 						# get last version Emailed to the user
-						lastVersionEmailed = self.pluginPrefs.get(u'updaterLastVersionEmailed', '0')
-				
- 						# if we already notified the user of this version then bail so that we don'time
-						# duplicate the notification
-						if lastVersionEmailed == latest_release["number"]:
-							self.logger.threaddebug(u'Version notification already emailed to the user about this version')
-							return True
-					
- 						# build the email subject and body for sending to the user
-						updateSubject = "Version {} of {} Indigo Plugin available".format(latest_release["number"], self.pluginDisplayName)
-						updateBody = "{} v{}\nReleased: {}\n{}\n\nTo update to the latest version of the application, please download the latest release available via the Indigo Plugin Store at {}.".format(
-								self.pluginDisplayName, latest_release["number"], latest_release["releaseDate"], plugin_dict["githubRepoUrl"], store_detail_url.format(plugin_dict["id"]))
-					
- 						# Save this version as the last one emailed in the prefs
-						self.pluginPrefs[u'updaterLastVersionEmailed'] = latest_release["number"]
- 						indigo.server.sendEmailTo(emailAddress, subject=updateSubject, body=updateBody)
-				
-					# return true in order to indicate to any caller that an update
-					# was found/processed
-					return True
-
-			# no update was available...
-			return False
-		except:
-			if self.debugLevel > DEBUGLEVEL_NONE:
-				self.logger.exception(u'Error checking for new plugin version.')
-			else:
-				self.logger.warning(u'Error checking for new plugin version.')
 				
 	
 	

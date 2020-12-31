@@ -164,8 +164,8 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		# perform any upgrade steps if the plugin is running for the first time after
 		# an upgrade
 		oldPluginVersion = pluginPrefs.get(u'loadedPluginVersion', u'')
-		if oldPluginVersion != unicode(pluginVersion):
-			self.performPluginUpgradeMaintenance(oldPluginVersion, unicode(pluginVersion))
+		if oldPluginVersion != RPFrameworkUtils.to_unicode(pluginVersion):
+			self.performPluginUpgradeMaintenance(oldPluginVersion, RPFrameworkUtils.to_unicode(pluginVersion))
 		
 		# initialization is complete...
 		self.pluginIsInitializing = False
@@ -175,7 +175,6 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	# plugin's directory, if it is present
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def parseRPFrameworkConfig(self, pluginName):
-		indigoBasePath = indigo.server.getInstallFolderPath()
 		pluginBasePath = os.getcwd()
 		pluginConfigPath = os.path.join(pluginBasePath, "RPFrameworkConfig.xml")
 		
@@ -830,14 +829,6 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				
 		# if we make it here, the input should be valid
 		return True
-				
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	# This routine will launch the help URL in a new browser window
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def launchForumURL(self, valuesDict, menuId):
-		supportUrl = self.getGUIConfigValue(GUI_CONFIG_PLUGINSETTINGS, GUI_CONFIG_PLUGIN_UPDATEDOWNLOADURL, u'http://forums.indigodomo.com/viewforum.php?f=59')
-		self.browserOpen(supportUrl)
-		
 		
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
@@ -960,7 +951,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			for deviceId in devicesToDump:
 				self.logger.info(u'Dumping details for DeviceID: {0}'.format(deviceId))
 				dumpDev = indigo.devices[int(deviceId)]
-				self.logger.info(unicode(dumpDev))
+				self.logger.info(RPFrameworkUtils.to_unicode(dumpDev))
 			return (True, valuesDict, errorsDict)
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -977,7 +968,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		indigoDeviceId = dev.id
 		paramValues = dict()
 		paramValues["actionValue"] = RPFrameworkUtils.to_unicode(action.actionValue)
-		self.logger.debug(u'Dimmer Command: ActionId={0}; Device={1}; actionValue='.format(indigoActionId, indigoDeviceId, paramValues["actionValue"]))
+		self.logger.debug(u'Dimmer Command: ActionId={0}; Device={1}; actionValue={2}'.format(indigoActionId, indigoDeviceId, paramValues["actionValue"]))
 		
 		self.executeAction(None, indigoActionId, indigoDeviceId, paramValues)
 		
@@ -997,12 +988,12 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		
 		# substitute each parameter value called for in the string; this is done first so that
 		# the parameter could call for a substitution
-		apMatcher = re.compile(u'%ap:([a-z\d]+)%', re.IGNORECASE)
+		apMatcher = re.compile(r'%ap:([a-z\d]+)%', re.IGNORECASE)
 		for match in apMatcher.finditer(substitutedString):
 			substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(actionParamValues[match.group(1)]))
 			
 		# substitute device properties since the substitute method below handles states...
-		dpMatcher = re.compile(u'%dp:([a-z\d]+)%', re.IGNORECASE)
+		dpMatcher = re.compile(r'%dp:([a-z\d]+)%', re.IGNORECASE)
 		for match in dpMatcher.finditer(substitutedString):
 			if type(rpDevice.indigoDevice.pluginProps.get(match.group(1), None)) is indigo.List:
 				substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), u"'" + u','.join(rpDevice.indigoDevice.pluginProps.get(match.group(1))) + u"'")
@@ -1010,7 +1001,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(rpDevice.indigoDevice.pluginProps.get(match.group(1), u'')))
 			
 		# handle device states for any where we do not specify a device id
-		dsMatcher = re.compile(u'%ds:([a-z\d]+)%', re.IGNORECASE)
+		dsMatcher = re.compile(r'%ds:([a-z\d]+)%', re.IGNORECASE)
 		for match in dsMatcher.finditer(substitutedString):
 			substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(rpDevice.indigoDevice.states.get(match.group(1), u'')))
 			
@@ -1020,7 +1011,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				parentDeviceId = int(rpDevice.indigoDevice.pluginProps[self.getGUIConfigValue(rpDevice.indigoDevice.deviceTypeId, GUI_CONFIG_PARENTDEVICEIDPROPERTYNAME, u'')])
 				if parentDeviceId in self.managedDevices:
 					parentRPDevice = self.managedDevices[parentDeviceId]
-					pdpMatcher = re.compile(u'%pdp:([a-z\d]+)%', re.IGNORECASE)
+					pdpMatcher = re.compile(r'%pdp:([a-z\d]+)%', re.IGNORECASE)
 					for match in pdpMatcher.finditer(substitutedString):
 						if type(parentRPDevice.indigoDevice.pluginProps.get(match.group(1), None)) is indigo.List:
 							substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), u"'" + u','.join(parentRPDevice.indigoDevice.pluginProps.get(match.group(1))) + u"'")
@@ -1028,7 +1019,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 							substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(parentRPDevice.indigoDevice.pluginProps.get(match.group(1), u'')))
 			
 		# handle plugin preferences
-		ppMatcher = re.compile(u'%pp:([a-z\d]+)%', re.IGNORECASE)
+		ppMatcher = re.compile(r'%pp:([a-z\d]+)%', re.IGNORECASE)
 		for match in ppMatcher.finditer(substitutedString):
 			substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(self.pluginPrefs.get(match.group(1), u'')))
 			

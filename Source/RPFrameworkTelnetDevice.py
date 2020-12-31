@@ -195,7 +195,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice.RPFrameworkDevice):
 					elif command.commandName == RPFrameworkCommand.CMD_UPDATE_DEVICE_STATE:
 						# this command is to update a device state with the payload (which may be an
 						# eval command)
-						newStateInfo = re.match('^\{ds\:([a-zA-Z\d]+)\}\{(.+)\}$', command.commandPayload, re.I)
+						newStateInfo = re.match(r'^\{ds\:([a-zA-Z\d]+)\}\{(.+)\}$', command.commandPayload, re.I)
 						if newStateInfo is None:
 							self.hostPlugin.logger.error(u'Invalid new device state specified')
 						else:
@@ -277,7 +277,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice.RPFrameworkDevice):
 				
 			# check to see if we should attempt a reconnect
 			self.scheduleReconnectionAttempt()
-		except socket.error, e:
+		except socket.error as e:
 			# this is a standard socket error, such as a reset... we can attempt to recover from this with
 			# a scheduled reconnect
 			if self.failedConnectionAttempts == 0 or self.hostPlugin.debug == True:

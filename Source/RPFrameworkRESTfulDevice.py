@@ -285,7 +285,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							else:
 								self.handleRESTfulError(command, str(responseObj.status_code), responseObj)
 							 	
-						except Exception, e:
+						except Exception as e:
 							# the response value really should not be defined here as it bailed without
 							# catching any of our response error conditions
 							self.handleRESTfulError(command, e, None)
@@ -296,7 +296,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							# this is to post a SOAP request to a web service... this will be similar to a restful put request
 							# but will contain a body payload
 							self.hostPlugin.logger.threaddebug(u'Received SOAP/JSON command request: {0}'.format(command.commandPayload))
-							soapPayloadParser = re.compile("^\s*([^\n]+)\n\s*([^\n]+)\n(.*)$", re.DOTALL)
+							soapPayloadParser = re.compile(r"^\s*([^\n]+)\n\s*([^\n]+)\n(.*)$", re.DOTALL)
 							soapPayloadData = soapPayloadParser.match(command.commandPayload)
 							soapPath = soapPayloadData.group(1).strip()
 							soapAction = soapPayloadData.group(2).strip()
@@ -328,7 +328,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 								self.hostPlugin.logger.threaddebug(u'Command Response was not HTTP OK, handling RESTful error')
 								self.handleRESTfulError(command, str(responseObj.status_code), responseObj)
 
-						except Exception, e:
+						except Exception as e:
 							self.handleRESTfulError(command, e, responseObj)
 					
 					else:

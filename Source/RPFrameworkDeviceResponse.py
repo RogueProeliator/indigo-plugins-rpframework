@@ -27,6 +27,7 @@ import re
 import RPFrameworkCommand
 import RPFrameworkPlugin
 import RPFrameworkUtils
+import RPFrameworkIndigoAction
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Constants and configuration variables
@@ -81,10 +82,12 @@ class RPFrameworkDeviceResponse(object):
 	def isResponseMatch(self, responseObj, rpCommand, rpDevice, rpPlugin):
 		if self.criteriaFormatString is None or self.criteriaFormatString == u'' or self.matchExpression is None or self.matchExpression == u'':
 			# we only need to look at the action...
-			if self.respondToActionId == u'' or self.respondToActionId == rpCommand.parentAction.indigoActionId:
+			if self.respondToActionId == u'' or rpCommand.parentAction is None:
 				return True
+			elif isinstance(rpCommand.parentAction, basestring):
+				return self.respondToActionId == rpCommand.parentAction
 			else:
-				return False
+				return self.respondToActionId == rpCommand.parentAction.indigoActionId
 				
 		matchCriteriaTest = self.substituteCriteriaFormatString(self.criteriaFormatString, responseObj, rpCommand, rpDevice, rpPlugin)
 		matchObj          = re.match(self.matchExpression, matchCriteriaTest, re.I)

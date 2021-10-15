@@ -5,40 +5,26 @@
 # RPFrameworkDevice by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Base class for all RogueProeliator's devices created by plugins for Perceptive
 #	Automation's Indigo software.
-#	
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Python imports
-#/////////////////////////////////////////////////////////////////////////////////////////
+#region Python imports
 import functools
-import indigo
 import Queue
 import random
 import threading
 import time
 
+import indigo
 import RPFrameworkCommand
 import RPFrameworkPlugin
 import RPFrameworkThread
 import RPFrameworkUtils
 
-
-#/////////////////////////////////////////////////////////////////////////////////////////
-# Constants and configuration variables
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
 
-
-#/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkDevice
@@ -46,12 +32,10 @@ import RPFrameworkUtils
 #	multi-threaded communications and attribute management
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkDevice(object):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Class construction and destruction methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Class Construction and Destruction Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor called once upon plugin class receiving a command to start device
 	# communication. The plugin will call other commands when needed, simply zero out the
@@ -72,22 +56,24 @@ class RPFrameworkDevice(object):
 		
 		self.upgradedDeviceStates     = list()
 		self.upgradedDeviceProperties = list()
-		
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Validation and GUI functions
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Validation and GUI functions
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine is called to retrieve a dynamic list of elements for an action (or
 	# other ConfigUI based) routine
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def getConfigDialogMenuItems(self, filter, valuesDict, typeId, targetId):
 		return []
-		
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Public communication-interface methods methods
-	#/////////////////////////////////////////////////////////////////////////////////////	
+	#region Public Communication-Interface Methods	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This call will be made from the plugin in order to start the communications with the
 	# hardware device... this will spin up the concurrent processing thread.
@@ -101,10 +87,11 @@ class RPFrameworkDevice(object):
 			if not (newPropertyDefn[0] in pluginPropsCopy):
 				self.hostPlugin.logger.info(u'Triggering property update due to missing device property: {0}'.format(RPFrameworkUtils.to_unicode(newPropertyDefn[0])))
 				pluginPropsCopy[newPropertyDefn[0]] = newPropertyDefn[1]
-				propertiesDictUpdateRequired = True
+				propertiesDictUpdateRequired        = True
 				
 				# safeguard in case the device doesn't get updated...
 				self.indigoDevice.pluginProps[newPropertyDefn[0]] = newPropertyDefn[1]
+
 		if propertiesDictUpdateRequired == True:
 			self.indigoDevice.replacePluginPropsOnServer(pluginPropsCopy)
 	
@@ -132,11 +119,12 @@ class RPFrameworkDevice(object):
 			self.concurrentThread.join()
 		self.concurrentThread = None
 		self.hostPlugin.logger.debug(u'Shutdown of communications with {0} complete'.format(self.indigoDevice.name))
-		
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Queue and command processing methods
-	#/////////////////////////////////////////////////////////////////////////////////////	
+	#region Queue and Command Processing Methods	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Add new command to queue, which is polled and emptied by 
 	# concurrentCommandProcessingThread funtion
@@ -190,11 +178,12 @@ class RPFrameworkDevice(object):
 				self.hostPlugin.logger.debug(u'Reconnection attempt scheduled for {0} seconds'.format(reconnectSeconds))
 		except e:
 			self.hostPlugin.logger.error(u'Failed to schedule reconnection attempt to device')			
-		
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Device hierarchy (parent/child relationship) routines
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Device Hierarchy (Parent/Child Relationship) Routines
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will generate the key to use in the managed child devices dictionary
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -232,11 +221,12 @@ class RPFrameworkDevice(object):
 		
 		# remove the device...
 		del self.childDevices[childDeviceKey]
-		
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////	
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Utility routines
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Utility Routines
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will reload the Indigo device from the database; useful if we need to
 	# get updated states or information 
@@ -253,4 +243,6 @@ class RPFrameworkDevice(object):
 			self.indigoDevice.states[updateValue["key"]] = updateValue["value"]
 		self.indigoDevice.updateStatesOnServer(statesToUpdate)
 	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 	

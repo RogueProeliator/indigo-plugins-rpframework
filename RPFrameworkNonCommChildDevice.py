@@ -6,35 +6,22 @@
 # 	Base class for all RogueProeliator's devices which do not actively communicate but
 #	rather function to pass commands along to a parent device; examples would be zones indigo
 #	a multi-room audio system or zones in an alarm panel
-#	
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Python imports
-#/////////////////////////////////////////////////////////////////////////////////////////
-import indigo
+#region Python imports
 import Queue
 
+import indigo
 import RPFrameworkCommand
 import RPFrameworkPlugin
 import RPFrameworkDevice
 import RPFrameworkUtils
 
-#/////////////////////////////////////////////////////////////////////////////////////////
-# Constants and configuration variables
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
 
-
-#/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkNonCommChildDevice
@@ -46,12 +33,10 @@ import RPFrameworkUtils
 #	of the device)
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkNonCommChildDevice(RPFrameworkDevice.RPFrameworkDevice):
 
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Class construction and destruction methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Construction and Destruction Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor called once upon plugin class receiving a command to start device
 	# communication. The plugin will call other commands when needed, simply zero out the
@@ -68,10 +53,12 @@ class RPFrameworkNonCommChildDevice(RPFrameworkDevice.RPFrameworkDevice):
 		
 	def terminateCommunications(self):
 		pass
-		
+	
+	#endregion
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Queue and command processing methods
-	#/////////////////////////////////////////////////////////////////////////////////////	
+
+	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Queue and Command Processing Methods	
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Add new command to queue of the PARENT object... this must be obtained from the
 	# plugin...
@@ -80,4 +67,7 @@ class RPFrameworkNonCommChildDevice(RPFrameworkDevice.RPFrameworkDevice):
 		parentDeviceId = int(self.indigoDevice.pluginProps[self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkPlugin.GUI_CONFIG_PARENTDEVICEIDPROPERTYNAME, u'')])
 		if parentDeviceId in self.hostPlugin.managedDevices:
 			self.hostPlugin.managedDevices[parentDeviceId].queueDeviceCommand(command)
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		

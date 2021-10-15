@@ -5,21 +5,11 @@
 # RPFrameworkRESTfulDevice by RogueProeliator <adam.d.ashe@gmail.com>
 # 	This class is a concrete implementation of the RPFrameworkDevice as a device which
 #	communicates via a REST style HTTP connection.
-#	
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Python imports
-#/////////////////////////////////////////////////////////////////////////////////////////
+#region Python imports
 import functools
 import httplib
 import indigo
@@ -34,20 +24,21 @@ import telnetlib
 import time
 import urllib
 import urllib2
-from urlparse import urlparse
+from   urlparse import urlparse
 
 import requests
-from requests.auth import HTTPDigestAuth
+from   requests.auth import HTTPDigestAuth
 import RPFrameworkPlugin
 import RPFrameworkCommand
 import RPFrameworkDevice
 import RPFrameworkNetworkingWOL
 import RPFrameworkUtils
 
+#endregion
+#/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Constants and configuration variables
-#/////////////////////////////////////////////////////////////////////////////////////////
+#region Constants and Configuration Variables
 CMD_RESTFUL_PUT   = u'RESTFUL_PUT'
 CMD_RESTFUL_GET   = u'RESTFUL_GET'
 CMD_SOAP_REQUEST  = u'SOAP_REQUEST'
@@ -61,8 +52,9 @@ GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY     = u'updateStatusPollerStartupDelay
 
 GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
 
-
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
+
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkRESTfulDevice
@@ -70,23 +62,22 @@ GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
 #	communicates via a REST style HTTP connection.
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Class construction and destruction methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Class Construction and Destruction Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor called once upon plugin class receiving a command to start device
 	# communication. Defers to the base class for processing but initializes params
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def __init__(self, plugin, device):
 		super(RPFrameworkRESTfulDevice, self).__init__(plugin, device)
-		
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Processing and command functions
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Processing and Command Functions
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine is designed to run in a concurrent thread and will continuously monitor
 	# the commands queue for work to do.
@@ -105,10 +96,10 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 			# retrieve any configuration information that may have been setup in the
 			# plugin configuration and/or device configuration
 			updateStatusPollerPropertyName = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY, u'updateInterval')
-			updateStatusPollerInterval = int(self.indigoDevice.pluginProps.get(updateStatusPollerPropertyName, u'90'))
-			updateStatusPollerNextRun = None
-			updateStatusPollerActionId = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID, u'')
-			emptyQueueReducedWaitCycles = int(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES, u'80'))
+			updateStatusPollerInterval     = int(self.indigoDevice.pluginProps.get(updateStatusPollerPropertyName, u'90'))
+			updateStatusPollerNextRun      = None
+			updateStatusPollerActionId     = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID, u'')
+			emptyQueueReducedWaitCycles    = int(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES, u'80'))
 			
 			# begin the infinite loop which will run as long as the queue contains commands
 			# and we have not received an explicit shutdown request
@@ -297,18 +288,18 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 							# but will contain a body payload
 							self.hostPlugin.logger.threaddebug(u'Received SOAP/JSON command request: {0}'.format(command.commandPayload))
 							soapPayloadParser = re.compile(r"^\s*([^\n]+)\n\s*([^\n]+)\n(.*)$", re.DOTALL)
-							soapPayloadData = soapPayloadParser.match(command.commandPayload)
-							soapPath = soapPayloadData.group(1).strip()
-							soapAction = soapPayloadData.group(2).strip()
-							soapBody = soapPayloadData.group(3).strip()							
-							fullGetUrl = u'http://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_str(deviceHTTPAddress[1]) + RPFrameworkUtils.to_str(soapPath)
+							soapPayloadData   = soapPayloadParser.match(command.commandPayload)
+							soapPath          = soapPayloadData.group(1).strip()
+							soapAction        = soapPayloadData.group(2).strip()
+							soapBody          = soapPayloadData.group(3).strip()
+							fullGetUrl        = u'http://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_str(deviceHTTPAddress[1]) + RPFrameworkUtils.to_str(soapPath)
 							self.hostPlugin.logger.debug(u'Processing SOAP/JSON operation to {0}'.format(fullGetUrl))
 
 							customHeaders = {}
 							self.addCustomHTTPHeaders(customHeaders)
 							if command.commandName == CMD_SOAP_REQUEST:
 								customHeaders["Content-type"] = "text/xml; charset=\"UTF-8\""
-								customHeaders["SOAPAction"] = RPFrameworkUtils.to_str(soapAction)
+								customHeaders["SOAPAction"]   = RPFrameworkUtils.to_str(soapAction)
 							else:
 								customHeaders["Content-type"] = "application/json"
 							
@@ -426,4 +417,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def notifySuccessfulDownload(self, rpCommand, outputFileName):
 		pass
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 	

@@ -5,30 +5,11 @@
 # RPFrameworkCommand by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Class for all RogueProeliator's commands that request that an action be executed
 #	on a processing thread.
-#
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.
-#	
-#	Version 0:
-#		Initial release of the device framework
-#	Version 8:
-#		Added reconnect to device command (CMD_DEVICE_RECONNECT)
-#	Version 17:
-#		Changed command constants to unicode
-#		Added getPayloadAsList function
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Constants and configuration variables
-#/////////////////////////////////////////////////////////////////////////////////////////
-# standard command names common to many plugins
+#region Constants and Configuration Variables
 CMD_INITIALIZE_CONNECTION       = u'INITIALIZECONNECTION'
 CMD_TERMINATE_PROCESSING_THREAD = u'TERMINATEPROCESSING'
 CMD_PAUSE_PROCESSING            = u'PAUSEPROCESSING'
@@ -42,8 +23,9 @@ CMD_DEVICE_RECONNECT            = u'RECONNECTDEVICE'
 
 CMD_DEBUG_LOGUPNPDEVICES        = u'LOGUPNPDEVICES'
 
-
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
+
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkCommand
@@ -51,12 +33,10 @@ CMD_DEBUG_LOGUPNPDEVICES        = u'LOGUPNPDEVICES'
 #	its processing thread that is executing the actions/requests/communications
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkCommand(object):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Class construction and destruction methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Construction and Destruction Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor allows passing in the data that makes up the command
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -65,11 +45,12 @@ class RPFrameworkCommand(object):
 		self.commandPayload   = commandPayload
 		self.postCommandPause = postCommandPause
 		self.parentAction     = parentAction
-		
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Utility methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Utility Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Routine to return a list for the payload, converting a string to a list using the
 	# provided delimiter when necessary
@@ -79,3 +60,6 @@ class RPFrameworkCommand(object):
 			return self.commandPayload.split(delim)
 		else:
 			return self.commandPayload
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////

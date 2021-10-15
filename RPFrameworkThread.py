@@ -5,21 +5,12 @@
 # RPFrameworkThread by RogueProeliator <adam.d.ashe@gmail.com>
 # 	Class for all RogueProeliator's device threads; supports cancellation via raising an
 #	exception in the thread
-#	
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
+
 import ctypes
 import inspect
 import threading
-
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 # Internal module-level function used to send an exception to a given thread
@@ -39,11 +30,8 @@ def _async_raise(tid, exctype):
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
-# RPFrameworkCommand
-#	Class that allows communication of an action request between the plugin device and
-#	its processing thread that is executing the actions/requests/communications
-#/////////////////////////////////////////////////////////////////////////////////////////
+# RPFrameworkThread
+#	Base threading class used to launch extra processing threads by plugins and devices
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkThread(threading.Thread):

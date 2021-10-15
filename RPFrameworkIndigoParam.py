@@ -7,33 +7,26 @@
 #	device configuration, plugin configuration, etc. It is used so that the base classes
 #	may automatically handle parameter functions (such as validation) that normally would
 #	have to be written into each plugin
-#
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Python imports
-#/////////////////////////////////////////////////////////////////////////////////////////
-import indigo
+#region Python Imports
 import os
 import re
 import socket
 import sys
 import time
-from urllib2 import urlopen
+from   urllib2 import urlopen
+
+import indigo
 import RPFrameworkUtils
 
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Constants and configuration variables
+
 #/////////////////////////////////////////////////////////////////////////////////////////
+#region Constants and Configuration Variables
 ParamTypeInteger         = 0
 ParamTypeFloat           = 1
 ParamTypeBoolean         = 2
@@ -43,7 +36,9 @@ ParamTypeIPAddress       = 5
 ParamTypeList            = 6
 ParamTypeOSFilePath      = 7
 
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
+
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkIndigoParamDefn
@@ -51,12 +46,10 @@ ParamTypeOSFilePath      = 7
 #	device configuration, plugin configuration, etc.
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkIndigoParamDefn(object):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Class construction and destruction methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Construction and Destruction Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor allows passing in the data that makes up the definition of the paramType
 	# (with the type and ID being the only two required fields
@@ -70,10 +63,12 @@ class RPFrameworkIndigoParamDefn(object):
 		self.maxValue             = maxValue
 		self.validationExpression = validationExpression
 		self.invalidValueMessage  = invalidValueMessage
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Validation methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Validation Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will return a boolean indicating if the provided value is valid
 	# according to the parameter type and configuration. It is assumed that the proposed
@@ -168,3 +163,6 @@ class RPFrameworkIndigoParamDefn(object):
 				
 		# if we make it here, the input should be valid
 		return True
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////

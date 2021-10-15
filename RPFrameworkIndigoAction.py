@@ -6,35 +6,22 @@
 # 	This class defines an action available to the user/processed by the plugin in a
 #	standard manner such that the base classes in the framework are able to process many
 #	actions automatically w/o custom writing them for each plugin.
-#
-#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# 	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# 	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# 	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# 	SOFTWARE.	
-#
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 
-
 #/////////////////////////////////////////////////////////////////////////////////////////
-# Python imports
-#/////////////////////////////////////////////////////////////////////////////////////////
-import indigo
+#region Python Imports
 import math
 import re
+
+import indigo
 import RPFrameworkCommand
 import RPFrameworkPlugin
 import RPFrameworkUtils
 
-#/////////////////////////////////////////////////////////////////////////////////////////
-# Constants and configuration variables
+#endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
 
-
-#/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkIndigoParamDefn
@@ -42,12 +29,10 @@ import RPFrameworkUtils
 #	device configuration, plugin configuration, etc.
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-#/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkIndigoActionDfn(object):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Class construction and destruction methods
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Construction and Destruction Methods
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Constructor allows passing in the data that makes up the definition of the action
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -61,11 +46,12 @@ class RPFrameworkIndigoActionDfn(object):
 		self.indigoParams = indigoParams
 		if self.indigoParams == None:
 			self.indigoParams = []
-		
+	
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Parameter definition functions
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Parameter Definition Functions
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# Allows an outside class to add a new parameter for this action
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -78,11 +64,12 @@ class RPFrameworkIndigoActionDfn(object):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def addIndigoCommand(self, commandName, commandFormatString, commandExecuteCount=u'1', commandRepeatDelay=u'', commandExecuteCondition=u''):
 		self.actionCommands.append((commandName, commandFormatString, commandExecuteCount, commandRepeatDelay, commandExecuteCondition))
-		
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////	
 		
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Validation routines
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Validation routines
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine validates the action against a set of values for the parameters of the
 	# action; the return is the same as the validation for Indigo call-backs:
@@ -106,11 +93,12 @@ class RPFrameworkIndigoActionDfn(object):
 			return (True, paramValues)
 		else:
 			return (False, paramValues, errorMessages)
-			
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////		
 			
 	#/////////////////////////////////////////////////////////////////////////////////////
-	# Action execution routines
-	#/////////////////////////////////////////////////////////////////////////////////////
+	#region Action Execution Routines
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will allow the base plugin to execute the action, generating the
 	# command(s) that will be passed to the device's command queue
@@ -169,3 +157,6 @@ class RPFrameworkIndigoActionDfn(object):
 		# error and may be queued up on the device
 		for commandForDevice in commandsToQueue:
 			rpDevice.queueDeviceCommand(commandForDevice)
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////

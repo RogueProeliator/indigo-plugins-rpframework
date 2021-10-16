@@ -34,12 +34,12 @@ Once you have decided which base class is right for your device type(s), create 
 class MyAwesomeDevice(RPFrameworkRESTfulDevice):
 ```
 
-The device classes will be mapped to your Indigo deviceTypeId's in the configuration file below. More documentation on these base classes may be found in the Wiki.
+The device classes will be mapped to your Indigo deviceTypeId's in the configuration file below. More documentation on these base classes may be found in the [Wiki](https://github.com/RogueProeliator/IndigoPlugins-RPFramework/wiki/4.-Device-Classes).
 
 ## Create the RPFramework Configuration File
 You configure many of the options and behaviors of the framework using the RPFrameworkConfiguration.xml file. If you are using a standard device type such as a device that uses a JSON web service then you may be able to completely configure the device without writing a line of code!
 
-Below is a brief overview of the major sections; the Wiki pages provide more details and a sample configuration file is available in the *docs* folder of this repository.
+Below is a brief overview of the major sections; the [Wiki](https://github.com/RogueProeliator/IndigoPlugins-RPFramework/wiki/5.-Configuration-File) pages provide more details and a sample configuration file is available in the *docs* folder of this repository.
 
 ### GUI Configuration
 This section provides some basic settings to determine how your plugin will present itself, such as customizing the included menu items.
@@ -96,7 +96,7 @@ This section allows you to configure the devices themselves in order to take adv
     </device>
 </devices>
 ```
-Please see the Wiki for detailed information regarding defining device parameters and responses.
+Please see the [Wiki](https://github.com/RogueProeliator/IndigoPlugins-RPFramework/wiki/5.2.-Configuration-:-Devices) for detailed information regarding defining device parameters and responses.
 
 ### Actions
 This section allows you to define information related to the actions that you have setup for devices within the Actions.xml file. Defining and allowing the framework to manage the actions provides you with built-in support for features such as UI validation, automatic handling of the code to execute (i.e. no need to write any code for HTTP or Telnet operations!), etc. It still allows you to call a custom function to handle the action if required, of course.
@@ -136,7 +136,7 @@ This section allows you to define information related to the actions that you ha
     </action>
 </actions>
 ```
-More details are required for this configuration - such as what commands are available and how to configure parameters - in the Wiki area.
+More details are required for this configuration - such as what commands are available and how to configure parameters - in the [Wiki](https://github.com/RogueProeliator/IndigoPlugins-RPFramework/wiki/5.3.-Configuration-:-Actions) area.
 
 ## Standard Configuration Files
 Taking advantage of the framework's processing as defined in the above section is very easy - you need only assign the framework's handler as the callback in your *Actions.xml* and *MenuItems.xml* file. For the *Actions.xml*, simply set **executeAction** as the *CallbackMethod* for each action.
@@ -148,7 +148,6 @@ Taking advantage of the framework's processing as defined in the above section i
 	</Action>
 </Actions>
 ```
-
 The framework also provides some built-in functionality for the MenuItems.xml handling, but you must still provide the UI elements. For example, in the following snippet there is no need to implement the *toggleDebugEnabled* routine as it is provided out-of-the-box.
 ```
 <MenuItems>
@@ -158,4 +157,4 @@ The framework also provides some built-in functionality for the MenuItems.xml ha
 	</MenuItem>
 </MenuItems>
 ```
-For a complete list of available menu items, please see the Wiki.
+For a complete list of available menu items, please see the [Wiki](https://github.com/RogueProeliator/IndigoPlugins-RPFramework/wiki/6.-Standard-XML-Files).

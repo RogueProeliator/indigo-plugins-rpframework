@@ -10,29 +10,38 @@
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #region Python Imports
-import ConfigParser
+from __future__ import absolute_import
 from   distutils.version import LooseVersion
 import logging
 import os
-import Queue
 import re
 import requests
 import shutil
 import socket
+import sys
 from   subprocess import call
 import threading
 import time
-from   urllib2 import urlopen
 import xml.etree.ElementTree
 
-from   dataAccess import indigosql
-import indigo
-import RPFrameworkCommand
-import RPFrameworkDeviceResponse 
-from   RPFrameworkIndigoAction import RPFrameworkIndigoActionDfn
-import RPFrameworkIndigoParam
-import RPFrameworkNetworkingUPnP
-import RPFrameworkUtils
+if sys.version_info > (3,):
+	import queue as Queue
+	import urllib.request as urlopen
+else:
+	import Queue
+	from urllib2 import urlopen
+
+try:
+	import indigo
+except:
+	from .RPFrameworkIndigoMock import RPFrameworkIndigoMock as indigo
+
+from .RPFrameworkCommand        import RPFrameworkCommand
+from .RPFrameworkDeviceResponse import RPFrameworkDeviceResponse 
+from .RPFrameworkIndigoAction   import RPFrameworkIndigoActionDfn
+from .RPFrameworkIndigoParam    import RPFrameworkIndigoParamDefn
+from .RPFrameworkNetworkingUPnP import uPnPDiscover
+from .RPFrameworkUtils          import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////

@@ -14,13 +14,19 @@
 #region Python Imports
 import os
 import re
-import socket
 import sys
-import time
-from   urllib2 import urlopen
 
-import indigo
-import RPFrameworkUtils
+if sys.version_info > (3,):
+	import urllib.request as urlopen
+else:
+	from urllib2 import urlopen
+
+try:
+	import indigo
+except:
+	pass
+
+from .RPFrameworkUtils import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -54,7 +60,7 @@ class RPFrameworkIndigoParamDefn(object):
 	# Constructor allows passing in the data that makes up the definition of the paramType
 	# (with the type and ID being the only two required fields
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def __init__(self, indigoId, paramType, isRequired=False, defaultValue="", minValue=0, maxValue=sys.maxint, validationExpression=u'', invalidValueMessage=u''):
+	def __init__(self, indigoId, paramType, isRequired=False, defaultValue="", minValue=0, maxValue=2147483647, validationExpression=u'', invalidValueMessage=u''):
 		self.indigoId             = indigoId
 		self.paramType            = paramType
 		self.isRequired           = isRequired

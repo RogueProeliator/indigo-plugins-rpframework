@@ -7,19 +7,18 @@
 #	providing a proven, stable environment.
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-import RPFrameworkPlugin
+from __future__ import absolute_import
 
-from RPFrameworkDevice import RPFrameworkDevice
-import RPFrameworkRESTfulDevice
-import RPFrameworkTelnetDevice
-import RPFrameworkNonCommChildDevice
+from .RPFrameworkPlugin             import RPFrameworkPlugin
 
-from RPFrameworkIndigoAction import RPFrameworkIndigoActionDfn
-import RPFrameworkCommand
-import RPFrameworkIndigoParam
-import RPFrameworkDeviceResponse
+from .RPFrameworkDevice             import RPFrameworkDevice
+from .RPFrameworkRESTfulDevice      import RPFrameworkRESTfulDevice
+from .RPFrameworkTelnetDevice       import RPFrameworkTelnetDevice
+from .RPFrameworkNonCommChildDevice import RPFrameworkNonCommChildDevice
 
-import RPFrameworkUtils
-import RPFrameworkThread
-import RPFrameworkNetworkingUPnP
-import RPFrameworkNetworkingWOL
+from .RPFrameworkIndigoAction       import RPFrameworkIndigoActionDfn
+from .RPFrameworkCommand            import RPFrameworkCommand
+from .RPFrameworkIndigoParam        import RPFrameworkIndigoParamDefn
+from .RPFrameworkDeviceResponse     import RPFrameworkDeviceResponse
+
+from .RPFrameworkThread             import RPFrameworkThread

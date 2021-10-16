@@ -11,13 +11,15 @@
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #region Python Imports
-import math
-import re
+from __future__ import absolute_import
 
-import indigo
-import RPFrameworkCommand
-import RPFrameworkPlugin
-import RPFrameworkUtils
+try:
+	import indigo
+except:
+	pass
+
+from .RPFrameworkCommand import RPFrameworkCommand
+from .RPFrameworkUtils   import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////

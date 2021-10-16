@@ -10,25 +10,26 @@
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #region Python Imports
-import functools
-import httplib
-import Queue
-import os
 import re
 import serial
-import string
 import socket
 import sys
-import threading
 import telnetlib
 import time
-import urllib
 
-import indigo
-import RPFrameworkPlugin
-import RPFrameworkCommand
-import RPFrameworkDevice
-import RPFrameworkUtils
+if sys.version_info > (3,):
+	import queue as Queue
+else:
+	import Queue
+
+try:
+	import indigo
+except:
+	pass
+
+from .RPFrameworkCommand import RPFrameworkCommand
+from .RPFrameworkDevice  import RPFrameworkDevice
+from .RPFrameworkUtils   import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -73,7 +74,7 @@ CMD_WRITE_TO_DEVICE = u'writeToTelnetConn'
 #	communicates via a telnet session
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-class RPFrameworkTelnetDevice(RPFrameworkDevice.RPFrameworkDevice):
+class RPFrameworkTelnetDevice(RPFrameworkDevice):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Construction and Destruction Methods

@@ -8,6 +8,12 @@
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
+#region Python Imports
+import sys
+#endregion
+#/////////////////////////////////////////////////////////////////////////////////////////
+
+#/////////////////////////////////////////////////////////////////////////////////////////
 # Data Type Conversions
 #/////////////////////////////////////////////////////////////////////////////////////////
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -17,12 +23,19 @@
 def to_unicode(obj, encoding="utf-8"):
 	if obj is None:
 		return u''
-	elif isinstance(obj, basestring):
+
+	if sys.version_info > (3,):
+		if isinstance(obj, str):
+			return obj
+		elif isinstance(obj, bytes):
+			return str(obj, encoding)
+		return str(obj)
+	else:
 		if isinstance(obj, unicode):
 			return obj
 		elif isinstance(obj, str):
 			return unicode(obj, encoding)
-	return unicode(obj)
+		return unicode(obj)
 	
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # This routine ensures that the given string is a string object (not unicode), converting
@@ -31,9 +44,16 @@ def to_unicode(obj, encoding="utf-8"):
 def to_str(obj, encoding="utf-8"):
 	if obj is None:
 		return ""
-	elif isinstance(obj, basestring):
+
+	if sys.version_info > (3,):
 		if isinstance(obj, str):
-			return obj
-		elif isinstance(obj, unicode):
 			return obj.encode(encoding)
-	return str(obj)
+		elif isinstance(obj, bytes):
+			return obj
+		return bytes(obj)
+	else:
+		if isinstance(obj, unicode):
+			return obj.encode(encoding)
+		elif isinstance(obj, str):
+			return obj
+		return str(obj)

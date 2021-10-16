@@ -10,17 +10,26 @@
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #region Python imports
-import functools
-import Queue
-import random
-import threading
-import time
+from __future__ import absolute_import
 
-import indigo
-import RPFrameworkCommand
-import RPFrameworkPlugin
-import RPFrameworkThread
-import RPFrameworkUtils
+import functools
+import random
+import sys
+import time
+if sys.version_info > (3,):
+	import queue as Queue
+else:
+	import Queue
+
+try:
+	import indigo
+except:
+	from .RPFrameworkIndigoMock import RPFrameworkIndigoMock as indigo
+
+from .RPFrameworkCommand import RPFrameworkCommand
+from .RPFrameworkPlugin  import RPFrameworkPlugin
+from .RPFrameworkThread  import RPFrameworkThread
+from .RPFrameworkUtils   import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////

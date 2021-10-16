@@ -10,29 +10,30 @@
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #region Python imports
-import functools
-import httplib
-import indigo
-import Queue
-import os
+from __future__ import absolute_import
 import re
-import string
 import subprocess
 import sys
-import threading
-import telnetlib
 import time
-import urllib
-import urllib2
-from   urlparse import urlparse
+
+if sys.version_info > (3,):
+	import http.client as httplib
+	import queue as Queue
+else:
+	import httplib
+	import Queue
+
+try:
+	import indigo
+except:
+	from .RPFrameworkIndigoMock import RPFrameworkIndigoMock as indigo
 
 import requests
-from   requests.auth import HTTPDigestAuth
-import RPFrameworkPlugin
-import RPFrameworkCommand
-import RPFrameworkDevice
-import RPFrameworkNetworkingWOL
-import RPFrameworkUtils
+from   requests.auth             import HTTPDigestAuth
+from   .RPFrameworkCommand       import RPFrameworkCommand
+from   .RPFrameworkDevice        import RPFrameworkDevice
+from   .RPFrameworkNetworkingWOL import sendWakeOnLAN
+from   .RPFrameworkUtils         import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +63,7 @@ GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
 #	communicates via a REST style HTTP connection.
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-class RPFrameworkRESTfulDevice(RPFrameworkDevice.RPFrameworkDevice):
+class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Class Construction and Destruction Methods

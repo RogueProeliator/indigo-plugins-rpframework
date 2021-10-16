@@ -11,13 +11,23 @@
 
 #/////////////////////////////////////////////////////////////////////////////////////////
 #region Python imports
-import Queue
+from __future__ import absolute_import
+import sys
 
-import indigo
-import RPFrameworkCommand
-import RPFrameworkPlugin
-import RPFrameworkDevice
-import RPFrameworkUtils
+if sys.version_info > (3,):
+	import queue as Queue
+else:
+	import Queue
+
+try:
+	import indigo
+except:
+	pass
+
+from .RPFrameworkCommand import RPFrameworkCommand
+from .RPFrameworkPlugin  import RPFrameworkPlugin
+from .RPFrameworkDevice  import RPFrameworkDevice
+from .RPFrameworkUtils   import to_unicode
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -33,7 +43,7 @@ import RPFrameworkUtils
 #	of the device)
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
-class RPFrameworkNonCommChildDevice(RPFrameworkDevice.RPFrameworkDevice):
+class RPFrameworkNonCommChildDevice(RPFrameworkDevice):
 
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Construction and Destruction Methods

@@ -27,20 +27,7 @@ except:
 	pass
 
 from .RPFrameworkUtils import to_unicode
-
-#endregion
-#/////////////////////////////////////////////////////////////////////////////////////////
-
-#/////////////////////////////////////////////////////////////////////////////////////////
-#region Constants and Configuration Variables
-ParamTypeInteger         = 0
-ParamTypeFloat           = 1
-ParamTypeBoolean         = 2
-ParamTypeString          = 3
-ParamTypeOSDirectoryPath = 4
-ParamTypeIPAddress       = 5
-ParamTypeList            = 6
-ParamTypeOSFilePath      = 7
+from .RPFrameworkUtils import to_str
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -53,6 +40,19 @@ ParamTypeOSFilePath      = 7
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkIndigoParamDefn(object):
+	#/////////////////////////////////////////////////////////////////////////////////////////
+	#region Constants and Configuration Variables
+	ParamTypeInteger         = 0
+	ParamTypeFloat           = 1
+	ParamTypeBoolean         = 2
+	ParamTypeString          = 3
+	ParamTypeOSDirectoryPath = 4
+	ParamTypeIPAddress       = 5
+	ParamTypeList            = 6
+	ParamTypeOSFilePath      = 7
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////////
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Construction and Destruction Methods
@@ -86,7 +86,7 @@ class RPFrameworkIndigoParamDefn(object):
 			return not self.isRequired
 		
 		# now validate that the type is correct...
-		if self.paramType == ParamTypeInteger:
+		if self.paramType == RPFrameworkIndigoParamDefn.ParamTypeInteger:
 			try:
 				proposedIntValue = int(proposedValue)
 				if proposedIntValue < self.minValue or proposedIntValue > self.maxValue:
@@ -95,7 +95,7 @@ class RPFrameworkIndigoParamDefn(object):
 			except:
 				return False
 				
-		elif self.paramType == ParamTypeFloat:
+		elif self.paramType == RPFrameworkIndigoParamDefn.ParamTypeFloat:
 			try:
 				proposedFltValue = float(proposedValue)
 				if proposedFltValue < self.minValue or proposedFltValue > self.maxValue:
@@ -104,25 +104,25 @@ class RPFrameworkIndigoParamDefn(object):
 			except:
 				return False
 				
-		elif self.paramType == ParamTypeBoolean:
+		elif self.paramType == RPFrameworkIndigoParamDefn.ParamTypeBoolean:
 			if type(proposedValue) is bool:
 				return True
 			else:
 				return proposedValue.lower() == u'true'
 			
-		elif self.paramType == ParamTypeOSDirectoryPath:
+		elif self.paramType == RPFrameworkIndigoParamDefn.ParamTypeOSDirectoryPath:
 			# validate that the path exists... and that it is a directory
-			return os.path.isdir(RPFrameworkUtils.to_str(proposedValue))
+			return os.path.isdir(to_str(proposedValue))
 			
-		elif self.paramType == ParamTypeOSFilePath:
+		elif self.paramType == RPFrameworkIndigoParamDefn.ParamTypeOSFilePath:
 			# validate that the file exists (and that it is a file)
-			return os.path.isfile(RPFrameworkUtils.to_str(proposedValue))
+			return os.path.isfile(to_str(proposedValue))
 		
-		elif self.paramType == ParamTypeIPAddress:
+		elif self.paramType == RPFrameworkIndigoParamDefn.ParamTypeIPAddress:
 			# validate the IP address using IPv4 standards for now...
-			return self.isIPv4Valid(RPFrameworkUtils.to_str(proposedValue))
+			return self.isIPv4Valid(to_str(proposedValue))
 			
-		elif self.paramType == ParamTypeList:
+		elif self.paramType == RPFrameworkIndigoParamDefn.ParamTypeList:
 			# validate that the list contains between the minimum and maximum
 			# number of entries
 			if len(proposedValue) < self.minValue or len(proposedValue) > self.maxValue:

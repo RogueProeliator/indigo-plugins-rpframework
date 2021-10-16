@@ -110,7 +110,7 @@ class RPFrameworkIndigoActionDfn(object):
 		validationResults = self.validateActionValues(paramValues)
 		if validationResults[0] == False:
 			rpPlugin.logger.error(u'Invalid values sent for action {0}; the following errors were found:'.format(self.indigoActionId))
-			rpPlugin.logger.error(RPFrameworkUtils.to_unicode(validationResults[2]))
+			rpPlugin.logger.error(to_unicode(validationResults[2]))
 			return
 		
 		# determine the list of parameter values based upon the parameter definitions

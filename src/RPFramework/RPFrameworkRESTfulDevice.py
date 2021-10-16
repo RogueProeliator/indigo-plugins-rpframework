@@ -33,6 +33,7 @@ from   requests.auth             import HTTPDigestAuth
 from   .RPFrameworkCommand       import RPFrameworkCommand
 from   .RPFrameworkDevice        import RPFrameworkDevice
 from   .RPFrameworkNetworkingWOL import sendWakeOnLAN
+from   .RPFrameworkUtils         import to_str
 from   .RPFrameworkUtils         import to_unicode
 
 #endregion
@@ -157,7 +158,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 						# this is a request to send a Wake-On-LAN request to a network-enabled device
 						# the command payload should be the MAC address of the device to wake up
 						try:
-							RPFrameworkNetworkingWOL.sendWakeOnLAN(command.commandPayload)
+							sendWakeOnLAN(command.commandPayload)
 						except:
 							self.hostPlugin.logger.error(u'Failed to send Wake-on-LAN packet')
 						
@@ -181,7 +182,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 							# CMD_RESTFUL_PUT
 							# [5] => data to post as the body (if any, may be blank)
 							commandPayloadList = command.getPayloadAsList()
-							fullGetUrl = commandPayloadList[0] + u'://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_unicode(deviceHTTPAddress[1]) + commandPayloadList[1]
+							fullGetUrl = commandPayloadList[0] + u'://' + deviceHTTPAddress[0] + u':' + to_unicode(deviceHTTPAddress[1]) + commandPayloadList[1]
 							self.hostPlugin.logger.threaddebug(u'Full URL for GET: {0}'.format(fullGetUrl))
 							
 							customHeaders = {}
@@ -225,7 +226,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 									
 										# execute the actual save from the binary response stream
 										try:
-											localFile = open(RPFrameworkUtils.to_str(saveLocation), "wb")
+											localFile = open(to_str(saveLocation), "wb")
 											localFile.write(responseObj.content)
 											self.hostPlugin.logger.threaddebug(u'Command Response: [{0}] -=- binary data written to {1}-=-'.format(responseObj.status_code, saveLocation))
 										
@@ -293,21 +294,21 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 							soapPath          = soapPayloadData.group(1).strip()
 							soapAction        = soapPayloadData.group(2).strip()
 							soapBody          = soapPayloadData.group(3).strip()
-							fullGetUrl        = u'http://' + deviceHTTPAddress[0] + u':' + RPFrameworkUtils.to_str(deviceHTTPAddress[1]) + RPFrameworkUtils.to_str(soapPath)
+							fullGetUrl        = u'http://' + deviceHTTPAddress[0] + u':' + to_str(deviceHTTPAddress[1]) + to_str(soapPath)
 							self.hostPlugin.logger.debug(u'Processing SOAP/JSON operation to {0}'.format(fullGetUrl))
 
 							customHeaders = {}
 							self.addCustomHTTPHeaders(customHeaders)
 							if command.commandName == CMD_SOAP_REQUEST:
 								customHeaders["Content-type"] = "text/xml; charset=\"UTF-8\""
-								customHeaders["SOAPAction"]   = RPFrameworkUtils.to_str(soapAction)
+								customHeaders["SOAPAction"]   = to_str(soapAction)
 							else:
 								customHeaders["Content-type"] = "application/json"
 							
 							# execute the URL post to the web service
 							self.hostPlugin.logger.threaddebug(u'Sending SOAP/JSON request:\n{0}'.format(soapBody))
 							self.hostPlugin.logger.threaddebug(u'Using headers: \n{0}'.format(customHeaders))
-							responseObj = requests.post(fullGetUrl, headers=customHeaders, verify=False, data=RPFrameworkUtils.to_str(soapBody))
+							responseObj = requests.post(fullGetUrl, headers=customHeaders, verify=False, data=to_str(soapBody))
 							
 							if responseObj.status_code == 200:
 								# handle this return as a text-based return
@@ -410,7 +411,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 			self.hostPlugin.logger.exception(u'An error occurred processing the SOAP/JSON POST request: (Device: {0}): {1}'.format(self.indigoDevice.id, err))
 			
 		if not response is None and not response.text is None:
-			self.hostPlugin.logger.debug(RPFrameworkUtils.to_unicode(response.text))
+			self.hostPlugin.logger.debug(to_unicode(response.text))
 			
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will handle notification to the device whenever a file was successfully

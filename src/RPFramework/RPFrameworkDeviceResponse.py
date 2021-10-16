@@ -19,16 +19,8 @@ except:
 	pass
 
 from .RPFrameworkCommand import RPFrameworkCommand
+from .RPFrameworkUtils   import is_string_type
 from .RPFrameworkUtils   import to_unicode
-
-#endregion
-#/////////////////////////////////////////////////////////////////////////////////////////
-
-#/////////////////////////////////////////////////////////////////////////////////////////
-#region Constants and Configuration Variables
-RESPONSE_EFFECT_UPDATESTATE  = u'updateDeviceState'
-RESPONSE_EFFECT_QUEUECOMMAND = u'queueCommand'
-RESPONSE_EFFECT_CALLBACK     = u'eventCallback'
 
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
@@ -41,6 +33,15 @@ RESPONSE_EFFECT_CALLBACK     = u'eventCallback'
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkDeviceResponse(object):
+
+	#/////////////////////////////////////////////////////////////////////////////////////////
+	#region Constants and Configuration Variables
+	RESPONSE_EFFECT_UPDATESTATE  = u'updateDeviceState'
+	RESPONSE_EFFECT_QUEUECOMMAND = u'queueCommand'
+	RESPONSE_EFFECT_CALLBACK     = u'eventCallback'
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////////
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Construction and Destruction Methods
@@ -79,7 +80,7 @@ class RPFrameworkDeviceResponse(object):
 			# we only need to look at the action...
 			if self.respondToActionId == u'' or rpCommand.parentAction is None:
 				return True
-			elif isinstance(rpCommand.parentAction, basestring):
+			elif is_string_type(rpCommand.parentAction):
 				return self.respondToActionId == rpCommand.parentAction
 			else:
 				return self.respondToActionId == rpCommand.parentAction.indigoActionId
@@ -101,9 +102,9 @@ class RPFrameworkDeviceResponse(object):
 		# specific to commands
 		if rpCommand is not None:
 			substitutedCriteria = substitutedCriteria.replace(u'%cp:name%', rpCommand.commandName)
-			substitutedCriteria = substitutedCriteria.replace(u'%cp:payload%', RPFrameworkUtils.to_unicode(rpCommand.commandPayload))
+			substitutedCriteria = substitutedCriteria.replace(u'%cp:payload%', to_unicode(rpCommand.commandPayload))
 		
-		if isinstance(responseObj, (str, unicode)):
+		if is_string_type(responseObj):
 			substitutedCriteria = substitutedCriteria.replace("%cp:response%", responseObj)
 		
 		# substitute the standard RPFramework substitutions
@@ -128,7 +129,7 @@ class RPFrameworkDeviceResponse(object):
 		
 			# processing for this effect is dependent upon the type
 			try:
-				if effect.effectType == RESPONSE_EFFECT_UPDATESTATE:
+				if effect.effectType == RPFrameworkDeviceResponse.RESPONSE_EFFECT_UPDATESTATE:
 					# this effect should update a device state (param) with a value as formated
 					newStateValueString = self.substituteCriteriaFormatString(effect.updateValueFormatString, responseObj, rpCommand, rpDevice, rpPlugin)
 					if effect.evalUpdateValue == True:
@@ -154,7 +155,7 @@ class RPFrameworkDeviceResponse(object):
 						rpPlugin.logger.debug(u'Effect execution: Update state "{0}" to "{1}" with UIValue "{2}"'.format(effect.updateParam, newStateValue, newStateUIValue))
 						rpDevice.indigoDevice.updateStateOnServer(key=effect.updateParam, value=newStateValue, uiValue=newStateUIValue)
 				
-				elif effect.effectType == RESPONSE_EFFECT_QUEUECOMMAND:
+				elif effect.effectType == RPFrameworkDeviceResponse.RESPONSE_EFFECT_QUEUECOMMAND:
 					# this effect will enqueue a new command... the updateParam will define the command name
 					# and the updateValueFormat will define the new payload
 					queueCommandName = self.substituteCriteriaFormatString(effect.updateParam, responseObj, rpCommand, rpDevice, rpPlugin)
@@ -168,7 +169,7 @@ class RPFrameworkDeviceResponse(object):
 					rpPlugin.logger.debug(u'Effect execution: Queuing command {0}'.format(queueCommandName))
 					rpDevice.queueDeviceCommand(RPFrameworkCommand.RPFrameworkCommand(queueCommandName, queueCommandPayload))
 				
-				elif effect.effectType == RESPONSE_EFFECT_CALLBACK:
+				elif effect.effectType == RPFrameworkDeviceResponse.RESPONSE_EFFECT_CALLBACK:
 					# this should kick off a callback to a python call on the device...
 					rpPlugin.logger.debug(u'Effect execution: Calling function {0}'.format(effect.updateParam))
 					eval(u'rpDevice.' + effect.updateParam + u'(responseObj, rpCommand)')

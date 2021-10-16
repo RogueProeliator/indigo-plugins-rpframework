@@ -57,3 +57,12 @@ def to_str(obj, encoding="utf-8"):
 		elif isinstance(obj, str):
 			return obj
 		return str(obj)
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# Returns a boolean indicating if the given object is a string-type
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+def is_string_type(obj):
+	if sys.version_info > (3,):
+		return isinstance(obj, str)
+	else:
+		return isinstance(obj, basestring)

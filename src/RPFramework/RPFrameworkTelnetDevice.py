@@ -125,7 +125,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 			commandResponseTimeout          = float(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_COMMANDREADTIMEOUT, u'0.5'))
 			
 			telnetConnectionRequiresLoginDP = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_REQUIRES_LOGIN_DP, u'')
-			telnetConnectionRequiresLogin   = (RPFrameworkUtils.to_unicode(self.indigoDevice.pluginProps.get(telnetConnectionRequiresLoginDP, u'False')).lower() == u'true')
+			telnetConnectionRequiresLogin   = (to_unicode(self.indigoDevice.pluginProps.get(telnetConnectionRequiresLoginDP, u'False')).lower() == u'true')
 			
 			updateStatusPollerPropertyName  = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_STATUSPOLL_INTERVALPROPERTY, u'updateInterval')
 			updateStatusPollerInterval      = int(self.indigoDevice.pluginProps.get(updateStatusPollerPropertyName, u'90'))
@@ -213,7 +213,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 						self.handleUnmanagedCommandInQueue(ipConnection, command)
 						
 					# determine if any response has been received from the telnet device...
-					responseText = RPFrameworkUtils.to_unicode(self.readLine(ipConnection, lineEndingToken, commandResponseTimeout))
+					responseText = to_unicode(self.readLine(ipConnection, lineEndingToken, commandResponseTimeout))
 					if responseText != u'':
 						self.hostPlugin.logger.threaddebug("Received: {0}".format(responseText))
 						self.handleDeviceResponse(responseText.replace(lineEndingToken, u''), command)
@@ -233,7 +233,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 				if continueProcessingCommands == True:
 					# check for any pending data coming IN from the telnet connection; note this is after the
 					# command queue has been emptied so it may be un-prompted incoming data
-					responseText = RPFrameworkUtils.to_unicode(self.readIfAvailable(ipConnection, lineEndingToken, commandResponseTimeout))
+					responseText = to_unicode(self.readIfAvailable(ipConnection, lineEndingToken, commandResponseTimeout))
 					if responseText != u'':
 						self.hostPlugin.logger.threaddebug(u'Received w/o Command: {0}'.format(responseText))
 						self.handleDeviceResponse(responseText.replace(lineEndingToken, u''), None)
@@ -308,7 +308,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 		if self.connectionType == CONNECTIONTYPE_TELNET:
 			return (u'', 0)
 		else:
-			portName     = RPFrameworkUtils.to_unicode(self.hostPlugin.substituteIndigoValues(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_SERIALPORT_PORTNAME, ""), self, None))
+			portName     = to_unicode(self.hostPlugin.substituteIndigoValues(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_SERIALPORT_PORTNAME, ""), self, None))
 			baudRate     = int(self.hostPlugin.substituteIndigoValues(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_SERIALPORT_BAUDRATE, "115200"), self, None))
 			parity       = eval("serial." + self.hostPlugin.substituteIndigoValues(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_SERIALPORT_PARITY, "PARITY_NONE"), self, None))
 			byteSize     = eval("serial." + self.hostPlugin.substituteIndigoValues(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_SERIALPORT_BYTESIZE, "EIGHTBITS"), self, None))
@@ -348,7 +348,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def readLine(self, connection, lineEndingToken, commandResponseTimeout):
 		if self.connectionType == CONNECTIONTYPE_TELNET:
-			return RPFrameworkUtils.to_unicode(connection.read_until(lineEndingToken, commandResponseTimeout))
+			return to_unicode(connection.read_until(lineEndingToken, commandResponseTimeout))
 		elif self.connectionType == CONNECTIONTYPE_SERIAL:
 			# Python 2.6 changed the readline signature to not include a line-ending token,
 			# so we have to "manually" re-create that here
@@ -363,7 +363,7 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 						break
 				else:
 					break
-			return RPFrameworkUtils.to_unicode(lineRead)
+			return to_unicode(lineRead)
 			
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine should attempt to read a line of text from the connection only if there
@@ -371,9 +371,9 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def readIfAvailable(self, connection, lineEndingToken, commandResponseTimeout):
 		if self.connectionType == CONNECTIONTYPE_TELNET:
-			return RPFrameworkUtils.to_unicode(connection.read_eager())
+			return to_unicode(connection.read_eager())
 		elif connection.inWaiting() > 0:
-			return RPFrameworkUtils.to_unicode(self.readLine(connection, lineEndingToken, commandResponseTimeout))
+			return to_unicode(self.readLine(connection, lineEndingToken, commandResponseTimeout))
 		else:
 			return u''
 		

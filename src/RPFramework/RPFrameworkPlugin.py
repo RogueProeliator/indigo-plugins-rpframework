@@ -15,12 +15,9 @@ from   distutils.version import LooseVersion
 import logging
 import os
 import re
-import requests
 import shutil
-import socket
 import sys
 from   subprocess import call
-import threading
 import time
 import xml.etree.ElementTree
 
@@ -41,6 +38,7 @@ from .RPFrameworkDeviceResponse import RPFrameworkDeviceResponse
 from .RPFrameworkIndigoAction   import RPFrameworkIndigoActionDfn
 from .RPFrameworkIndigoParam    import RPFrameworkIndigoParamDefn
 from .RPFrameworkNetworkingUPnP import uPnPDiscover
+from .RPFrameworkUtils          import to_str
 from .RPFrameworkUtils          import to_unicode
 
 #endregion
@@ -165,8 +163,8 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		# perform any upgrade steps if the plugin is running for the first time after
 		# an upgrade
 		oldPluginVersion = pluginPrefs.get(u'loadedPluginVersion', u'')
-		if oldPluginVersion != RPFrameworkUtils.to_unicode(pluginVersion):
-			self.performPluginUpgradeMaintenance(oldPluginVersion, RPFrameworkUtils.to_unicode(pluginVersion))
+		if oldPluginVersion != to_unicode(pluginVersion):
+			self.performPluginUpgradeMaintenance(oldPluginVersion, to_unicode(pluginVersion))
 		
 		# initialization is complete...
 		self.pluginIsInitializing = False
@@ -205,8 +203,8 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				deviceMappings = pluginConfigNode.find("deviceMapping")
 				if deviceMappings != None:
 					for deviceMapping in deviceMappings.findall("device"):
-						indigoId  = RPFrameworkUtils.to_unicode(deviceMapping.get('indigoId'))
-						className = RPFrameworkUtils.to_unicode(deviceMapping.get('className'))
+						indigoId  = to_unicode(deviceMapping.get('indigoId'))
+						className = to_unicode(deviceMapping.get('className'))
 						self.managedDeviceClassMapping[indigoId] = className
 						self.logger.threaddebug(u'Found device mapping; id: {0} to class: {1}'.format(indigoId, className))
 				else:
@@ -217,7 +215,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				devicesNode = pluginConfigNode.find("devices")
 				if devicesNode != None:
 					for deviceDfn in devicesNode.findall("device"):
-						indigoDeviceId = RPFrameworkUtils.to_unicode(deviceDfn.get("indigoId"))
+						indigoDeviceId = to_unicode(deviceDfn.get("indigoId"))
 						
 						# process all of the parameters for this device
 						deviceParamsNode = deviceDfn.find("params")
@@ -243,10 +241,10 @@ class RPFrameworkPlugin(indigo.PluginBase):
 						deviceResponsesNode = deviceDfn.find("deviceResponses")
 						if deviceResponsesNode != None:
 							for devResponse in deviceResponsesNode.findall("response"):
-								responseId           = RPFrameworkUtils.to_unicode(devResponse.get("id"))
-								responseToActionId   = RPFrameworkUtils.to_unicode(devResponse.get("respondToActionId"))
-								criteriaFormatString = RPFrameworkUtils.to_unicode(devResponse.find("criteriaFormatString").text)
-								matchExpression      = RPFrameworkUtils.to_unicode(devResponse.find("matchExpression").text)
+								responseId           = to_unicode(devResponse.get("id"))
+								responseToActionId   = to_unicode(devResponse.get("respondToActionId"))
+								criteriaFormatString = to_unicode(devResponse.find("criteriaFormatString").text)
+								matchExpression      = to_unicode(devResponse.find("matchExpression").text)
 								self.logger.threaddebug(u'Found device response: {0}'.format(responseId))
 									
 								# create the object so that effects may be added from child nodes
@@ -257,20 +255,20 @@ class RPFrameworkPlugin(indigo.PluginBase):
 								if effectsListNode != None:
 									for effectDefn in effectsListNode.findall("effect"):
 										effectType        = eval(u'RPFrameworkDeviceResponse.{0}'.format(effectDefn.get("effectType")))
-										effectUpdateParam = RPFrameworkUtils.to_unicode(effectDefn.find("updateParam").text)
-										effectValueFormat = RPFrameworkUtils.to_unicode(effectDefn.find("updateValueFormat").text)
+										effectUpdateParam = to_unicode(effectDefn.find("updateParam").text)
+										effectValueFormat = to_unicode(effectDefn.find("updateValueFormat").text)
 										
 										effectValueFormatExVal = u''
 										effectValueFormatExNode = effectDefn.find("updateValueExFormat")
 										if effectValueFormatExNode != None:
-											effectValueFormatExVal = RPFrameworkUtils.to_unicode(effectValueFormatExNode.text)
+											effectValueFormatExVal = to_unicode(effectValueFormatExNode.text)
 										
-										effectValueEvalResult = RPFrameworkUtils.to_unicode(effectDefn.get("evalResult")).lower() == "true"
+										effectValueEvalResult = to_unicode(effectDefn.get("evalResult")).lower() == "true"
 										
 										effectExecCondition = u''
 										effectExecConditionNode = effectDefn.find("updateExecCondition")
 										if effectExecConditionNode != None:
-											effectExecCondition = RPFrameworkUtils.to_unicode(effectExecConditionNode.text)
+											effectExecCondition = to_unicode(effectExecConditionNode.text)
 										
 										self.logger.threaddebug(u'Found response effect: Type={0}; Param: {1}; ValueFormat={2}; ValueFormatEx={3}; Eval={4}; Condition={5}'.format(effectType, effectUpdateParam, effectValueFormat, effectValueFormatExVal, effectValueEvalResult, effectExecCondition))
 										devResponseDefn.addResponseEffect(RPFrameworkDeviceResponse.RPFrameworkDeviceResponseEffect(effectType, effectUpdateParam, effectValueFormat, effectValueFormatExVal, effectValueEvalResult, effectExecCondition))
@@ -283,7 +281,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				managedActions = pluginConfigNode.find("actions")
 				if managedActions != None:
 					for managedAction in managedActions.findall("action"):
-						indigoActionId = RPFrameworkUtils.to_unicode(managedAction.get('indigoId'))
+						indigoActionId = to_unicode(managedAction.get('indigoId'))
 						rpAction = RPFrameworkIndigoActionDfn(indigoActionId)
 						self.logger.threaddebug(u'Found managed action: ' + indigoActionId)
 						
@@ -297,19 +295,19 @@ class RPFrameworkPlugin(indigo.PluginBase):
 								commandExecuteCondition     = u''
 								commandExecuteConditionNode = commandDefn.find("commandExecCondition")
 								if commandExecuteConditionNode != None:
-									commandExecuteCondition = RPFrameworkUtils.to_unicode(commandExecuteConditionNode.text)
+									commandExecuteCondition = to_unicode(commandExecuteConditionNode.text)
 								
 								commandRepeatCount = u''
 								commandRepeatCountNode = commandDefn.find("commandRepeatCount")
 								if commandRepeatCountNode != None:
-									commandRepeatCount = RPFrameworkUtils.to_unicode(commandRepeatCountNode.text)
+									commandRepeatCount = to_unicode(commandRepeatCountNode.text)
 									
 								commandRepeatDelay = u''
 								commandRepeatDelayNode = commandDefn.find("commandRepeatDelay")
 								if commandRepeatDelayNode != None:
-									commandRepeatDelay = RPFrameworkUtils.to_unicode(commandRepeatDelayNode.text)
+									commandRepeatDelay = to_unicode(commandRepeatDelayNode.text)
 								
-								rpAction.addIndigoCommand(RPFrameworkUtils.to_unicode(commandNameNode.text), RPFrameworkUtils.to_unicode(commandFormatStringNode.text), commandRepeatCount, commandRepeatDelay, commandExecuteCondition)
+								rpAction.addIndigoCommand(to_unicode(commandNameNode.text), to_unicode(commandFormatStringNode.text), commandRepeatCount, commandRepeatDelay, commandExecuteCondition)
 							
 						paramsNode = managedAction.find("params")
 						if paramsNode != None:
@@ -330,15 +328,15 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	# a RPFrameworkIndigoParam object fully filled in from the node
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def readIndigoParamNode(self, paramNode):
-		paramIndigoId   = RPFrameworkUtils.to_unicode(paramNode.get("indigoId"))
+		paramIndigoId   = to_unicode(paramNode.get("indigoId"))
 		paramType       = eval(u'RPFrameworkIndigoParam.{0}'.format(paramNode.get('paramType')))
 		paramIsRequired = (paramNode.get("isRequired").lower() == "true")
-		rpParam         = RPFrameworkIndigoParam.RPFrameworkIndigoParamDefn(paramIndigoId, paramType, isRequired=paramIsRequired)
+		rpParam         = RPFrameworkIndigoParamDefn(paramIndigoId, paramType, isRequired=paramIsRequired)
 		
 		minValueNode = paramNode.find("minValue")
 		if minValueNode != None:
 			minValueString = minValueNode.text
-			if rpParam.paramType == RPFrameworkIndigoParam.ParamTypeFloat:
+			if rpParam.paramType == RPFrameworkIndigoParamDefn.ParamTypeFloat:
 				rpParam.minValue = float(minValueString)
 			else:
 				rpParam.minValue = int(minValueString)
@@ -346,29 +344,29 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		maxValueNode = paramNode.find("maxValue")
 		if maxValueNode != None:
 			maxValueString = maxValueNode.text
-			if rpParam.paramType == RPFrameworkIndigoParam.ParamTypeFloat:
+			if rpParam.paramType == RPFrameworkIndigoParamDefn.ParamTypeFloat:
 				rpParam.maxValue = float(maxValueString)
 			else:
 				rpParam.maxValue = int(maxValueString)
 				
 		validationExpressionNode = paramNode.find("validationExpression")
 		if validationExpressionNode != None:
-			rpParam.validationExpression = RPFrameworkUtils.to_unicode(validationExpressionNode.text)
+			rpParam.validationExpression = to_unicode(validationExpressionNode.text)
 				
 		defaultValueNode = paramNode.find("defaultValue")
 		if defaultValueNode != None:
-			if rpParam.paramType == RPFrameworkIndigoParam.ParamTypeFloat:
+			if rpParam.paramType == RPFrameworkIndigoParamDefn.ParamTypeFloat:
 				rpParam.defaultValue = float(defaultValueNode.text)
-			elif rpParam.paramType == RPFrameworkIndigoParam.ParamTypeInteger:
+			elif rpParam.paramType == RPFrameworkIndigoParamDefn.ParamTypeInteger:
 				rpParam.defaultValue = int(defaultValueNode.text)
-			elif rpParam.paramType == RPFrameworkIndigoParam.ParamTypeBoolean:
+			elif rpParam.paramType == RPFrameworkIndigoParamDefn.ParamTypeBoolean:
 				rpParam.defaultValue = (defaultValueNode.text.lower() == "true")
 			else:
 				rpParam.defaultValue = defaultValueNode.text
 				
 		invalidMessageNode = paramNode.find("invalidValueMessage")
 		if invalidMessageNode != None:
-			rpParam.invalidValueMessage = RPFrameworkUtils.to_unicode(invalidMessageNode.text)
+			rpParam.invalidValueMessage = to_unicode(invalidMessageNode.text)
 	
 		return rpParam
 	
@@ -671,7 +669,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			# user... watch for failures and do not let this go on (must time out) since
 			# the dialog could get killed
 			updateAvailable              = self.checkVersionNow()
-			valuesDict["currentVersion"] = RPFrameworkUtils.to_unicode(self.pluginVersion)
+			valuesDict["currentVersion"] = to_unicode(self.pluginVersion)
 			valuesDict["latestVersion"]  = self.latestReleaseFound
 			
 			# give the user a "better" message about the current status
@@ -809,7 +807,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	def isIPv4Valid(self, ip):
 		# Make sure a value was entered for the address... an IPv4 should require at least
 		# 7 characters (0.0.0.0)
-		ip = RPFrameworkUtils.to_unicode(ip)
+		ip = to_unicode(ip)
 		if len(ip) < 7:
 			return False
 			
@@ -904,21 +902,21 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			self.logger.debug(u'Beginning UPnP Device Search')
 			serviceTarget        = u'ssdp:all'
 			discoveryStarted     = time.time()
-			discoveredDeviceList = RPFrameworkNetworkingUPnP.uPnPDiscover(serviceTarget, timeout=6)
+			discoveredDeviceList = uPnPDiscover(serviceTarget, timeout=6)
 			
 			# create an HTML file that contains the details for all of the devices found on the network
 			self.logger.debug(u'UPnP Device Search completed... creating output HTML')
 			deviceHtml  = u'<html><head><title>UPnP Devices Found</title><style type="text/css">html,body { margin: 0px; padding: 0px; width: 100%; height: 100%; }\n.upnpDevice { margin: 10px 0px 8px 5px; border-bottom: solid 1px #505050; }\n.fieldLabel { width: 140px; display: inline-block; }</style></head><body>'
 			deviceHtml += u"<div style='background-color: #3f51b5; width: 100%; height: 50px; border-bottom: solid 2px black;'><span style='color: #a1c057; font-size: 25px; font-weight: bold; line-height: 49px; padding-left: 3px;'>RogueProeliator's RPFramework UPnP Discovery Report</span></div>"
-			deviceHtml += u"<div style='border-bottom: solid 2px black; padding: 8px 3px;'><span class='fieldLabel'><b>Requesting Plugin:</b></span>" + self.pluginDisplayName + u"<br /><span class='fieldLabel'><b>Service Query:</b></span>" + serviceTarget + u"<br /><span class='fieldLabel'><b>Date Run:</b></span>" + RPFrameworkUtils.to_unicode(discoveryStarted) + "</div>"	
+			deviceHtml += u"<div style='border-bottom: solid 2px black; padding: 8px 3px;'><span class='fieldLabel'><b>Requesting Plugin:</b></span>" + self.pluginDisplayName + u"<br /><span class='fieldLabel'><b>Service Query:</b></span>" + serviceTarget + u"<br /><span class='fieldLabel'><b>Date Run:</b></span>" + to_unicode(discoveryStarted) + "</div>"	
 		
 			# loop through each device found...
 			for device in discoveredDeviceList:
-				deviceHtml += u"<div class='upnpDevice'><span class='fieldLabel'>Location:</span><a href='" + RPFrameworkUtils.to_unicode(device.location) + u"' target='_blank'>" + RPFrameworkUtils.to_unicode(device.location) + u"</a><br /><span class='fieldLabel'>USN:</span>" + RPFrameworkUtils.to_unicode(device.usn) + u"<br /><span class='fieldLabel'>ST:</span>" + RPFrameworkUtils.to_unicode(device.st) + u"<br /><span class='fieldLabel'>Cache Time:</span>" + RPFrameworkUtils.to_unicode(device.cache) + u"s"
+				deviceHtml += u"<div class='upnpDevice'><span class='fieldLabel'>Location:</span><a href='" + to_unicode(device.location) + u"' target='_blank'>" + to_unicode(device.location) + u"</a><br /><span class='fieldLabel'>USN:</span>" + to_unicode(device.usn) + u"<br /><span class='fieldLabel'>ST:</span>" + to_unicode(device.st) + u"<br /><span class='fieldLabel'>Cache Time:</span>" + to_unicode(device.cache) + u"s"
 				for header in device.allHeaders:
-					headerKey = RPFrameworkUtils.to_unicode(header[0])
+					headerKey = to_unicode(header[0])
 					if headerKey != u'location' and headerKey != u'usn' and headerKey != u'cache-control' and headerKey != u'st' and headerKey != u'ext':
-						deviceHtml += u"<br /><span class='fieldLabel'>" + RPFrameworkUtils.to_unicode(header[0]) + u":</span>" + RPFrameworkUtils.to_unicode(header[1])
+						deviceHtml += u"<br /><span class='fieldLabel'>" + to_unicode(header[0]) + u":</span>" + to_unicode(header[1])
 				deviceHtml += u"</div>"
 		
 			deviceHtml += u"</body></html>"
@@ -927,12 +925,12 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			self.logger.threaddebug(u"Writing UPnP Device Search HTML to file")
 			tempFilename        = self.getPluginDirectoryFilePath("tmpUPnPDiscoveryResults.html")
 			upnpResultsHtmlFile = open(tempFilename, 'w')
-			upnpResultsHtmlFile.write(RPFrameworkUtils.to_str(deviceHtml))
+			upnpResultsHtmlFile.write(to_str(deviceHtml))
 			upnpResultsHtmlFile.close()
 		
 			# launch the file in a browser window via the command line
 			call(["open", tempFilename])
-			self.logger.info(u'Created UPnP results temporary file at ' + RPFrameworkUtils.to_unicode(tempFilename))
+			self.logger.info(u'Created UPnP results temporary file at ' + to_unicode(tempFilename))
 		except:
 			self.logger.error(u'Error generating UPnP report')
 	
@@ -951,7 +949,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			for deviceId in devicesToDump:
 				self.logger.info(u'Dumping details for DeviceID: {0}'.format(deviceId))
 				dumpDev = indigo.devices[int(deviceId)]
-				self.logger.info(RPFrameworkUtils.to_unicode(dumpDev))
+				self.logger.info(to_unicode(dumpDev))
 			return (True, valuesDict, errorsDict)
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -961,13 +959,13 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	def actionControlDimmerRelay(self, action, dev):
 		# transform this action into our standard "executeAction" parameters so that the
 		# action is processed in a standard way
-		indigoActionId = RPFrameworkUtils.to_unicode(action.deviceAction)
+		indigoActionId = to_unicode(action.deviceAction)
 		if indigoActionId == u'11':
 			indigoActionId = u'StatusRequest'
 		
 		indigoDeviceId = dev.id
 		paramValues = dict()
-		paramValues["actionValue"] = RPFrameworkUtils.to_unicode(action.actionValue)
+		paramValues["actionValue"] = to_unicode(action.actionValue)
 		self.logger.debug(u'Dimmer Command: ActionId={0}; Device={1}; actionValue={2}'.format(indigoActionId, indigoDeviceId, paramValues["actionValue"]))
 		
 		self.executeAction(None, indigoActionId, indigoDeviceId, paramValues)
@@ -990,20 +988,20 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		# the parameter could call for a substitution
 		apMatcher = re.compile(r'%ap:([a-z\d]+)%', re.IGNORECASE)
 		for match in apMatcher.finditer(substitutedString):
-			substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(actionParamValues[match.group(1)]))
+			substitutedString = substitutedString.replace(to_unicode(match.group(0)), to_unicode(actionParamValues[match.group(1)]))
 			
 		# substitute device properties since the substitute method below handles states...
 		dpMatcher = re.compile(r'%dp:([a-z\d]+)%', re.IGNORECASE)
 		for match in dpMatcher.finditer(substitutedString):
 			if type(rpDevice.indigoDevice.pluginProps.get(match.group(1), None)) is indigo.List:
-				substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), u"'" + u','.join(rpDevice.indigoDevice.pluginProps.get(match.group(1))) + u"'")
+				substitutedString = substitutedString.replace(to_unicode(match.group(0)), u"'" + u','.join(rpDevice.indigoDevice.pluginProps.get(match.group(1))) + u"'")
 			else:
-				substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(rpDevice.indigoDevice.pluginProps.get(match.group(1), u'')))
+				substitutedString = substitutedString.replace(to_unicode(match.group(0)), to_unicode(rpDevice.indigoDevice.pluginProps.get(match.group(1), u'')))
 			
 		# handle device states for any where we do not specify a device id
 		dsMatcher = re.compile(r'%ds:([a-z\d]+)%', re.IGNORECASE)
 		for match in dsMatcher.finditer(substitutedString):
-			substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(rpDevice.indigoDevice.states.get(match.group(1), u'')))
+			substitutedString = substitutedString.replace(to_unicode(match.group(0)), to_unicode(rpDevice.indigoDevice.states.get(match.group(1), u'')))
 			
 		# handle parent device properties (for child devices)
 		if rpDevice != None:
@@ -1014,14 +1012,14 @@ class RPFrameworkPlugin(indigo.PluginBase):
 					pdpMatcher = re.compile(r'%pdp:([a-z\d]+)%', re.IGNORECASE)
 					for match in pdpMatcher.finditer(substitutedString):
 						if type(parentRPDevice.indigoDevice.pluginProps.get(match.group(1), None)) is indigo.List:
-							substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), u"'" + u','.join(parentRPDevice.indigoDevice.pluginProps.get(match.group(1))) + u"'")
+							substitutedString = substitutedString.replace(to_unicode(match.group(0)), u"'" + u','.join(parentRPDevice.indigoDevice.pluginProps.get(match.group(1))) + u"'")
 						else:
-							substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(parentRPDevice.indigoDevice.pluginProps.get(match.group(1), u'')))
+							substitutedString = substitutedString.replace(to_unicode(match.group(0)), to_unicode(parentRPDevice.indigoDevice.pluginProps.get(match.group(1), u'')))
 			
 		# handle plugin preferences
 		ppMatcher = re.compile(r'%pp:([a-z\d]+)%', re.IGNORECASE)
 		for match in ppMatcher.finditer(substitutedString):
-			substitutedString = substitutedString.replace(RPFrameworkUtils.to_unicode(match.group(0)), RPFrameworkUtils.to_unicode(self.pluginPrefs.get(match.group(1), u'')))
+			substitutedString = substitutedString.replace(to_unicode(match.group(0)), to_unicode(self.pluginPrefs.get(match.group(1), u'')))
 			
 		# perform the standard indigo values substitution...
 		substitutedString = self.substitute(substitutedString)
@@ -1069,7 +1067,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		if time.time() > self.lastDeviceEnumeration + uPNPCacheTime or len(self.enumeratedDevices) == 0:
 			serviceId = self.getGUIConfigValue(deviceTypeId, GUI_CONFIG_UPNP_SERVICE, u'ssdp:all')
 			self.logger.debug(u'Performing uPnP search for: {0}'.format(serviceId))
-			discoveredDevices = RPFrameworkNetworkingUPnP.uPnPDiscover(serviceId)
+			discoveredDevices = uPnPDiscover(serviceId)
 			self.logger.debug(u'Found {0} devices'.format(len(discoveredDevices)))
 			
 			self.enumeratedDevices = discoveredDevices
@@ -1086,7 +1084,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		indigoBasePath = indigo.server.getInstallFolderPath()
 		
 		requestedFilePath = os.path.join(indigoBasePath, "Plugins/{0}.indigoPlugin/Contents/Server Plugin/{1}".format(pluginName, fileName))
-		return RPFrameworkUtils.to_str(requestedFilePath)
+		return to_str(requestedFilePath)
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will write out a plugin report to a file; it is intended to give us a
@@ -1098,7 +1096,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		if len(headerProperties) > 0:
 			reportHtmlHeader += u"<div style='border-bottom: solid 2px black; padding: 8px 3px;'>"
 			for headerProp in headerProperties:
-				reportHtmlHeader += u"<div><span class='fieldLabel'><b>" + RPFrameworkUtils.to_unicode(headerProp[0]) + u"</b></span>" + RPFrameworkUtils.to_unicode(headerProp[1]) + u"</div>"
+				reportHtmlHeader += u"<div><span class='fieldLabel'><b>" + to_unicode(headerProp[0]) + u"</b></span>" + to_unicode(headerProp[1]) + u"</div>"
 			reportHtmlHeader += u"</div>"
 			
 		reportFooter = u"</body></html>"
@@ -1108,7 +1106,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		if isRelativePath == True:
 			reportFilename = self.getPluginDirectoryFilePath(reportFilename)
 		reportOutputFile = open(reportFilename, 'w')
-		reportOutputFile.write(RPFrameworkUtils.to_str(reportFullHtml))
+		reportOutputFile.write(to_str(reportFullHtml))
 		reportOutputFile.close()
 		
 		return reportFilename

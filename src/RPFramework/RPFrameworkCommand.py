@@ -9,20 +9,8 @@
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-#region Constants and Configuration Variables
-CMD_INITIALIZE_CONNECTION       = u'INITIALIZECONNECTION'
-CMD_TERMINATE_PROCESSING_THREAD = u'TERMINATEPROCESSING'
-CMD_PAUSE_PROCESSING            = u'PAUSEPROCESSING'
-CMD_DOWNLOAD_UPDATE             = u'DOWNLOADUPDATE'
-
-CMD_UPDATE_DEVICE_STATUS_FULL   = u'UPDATEDEVICESTATUS_FULL'
-CMD_UPDATE_DEVICE_STATE         = u'UPDATEDEVICESTATE'
-
-CMD_NETWORKING_WOL_REQUEST      = u'SENDWOLREQUEST'
-CMD_DEVICE_RECONNECT            = u'RECONNECTDEVICE'
-
-CMD_DEBUG_LOGUPNPDEVICES        = u'LOGUPNPDEVICES'
-
+#region Python Imports
+import sys
 #endregion
 #/////////////////////////////////////////////////////////////////////////////////////////
 
@@ -34,6 +22,24 @@ CMD_DEBUG_LOGUPNPDEVICES        = u'LOGUPNPDEVICES'
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkCommand(object):
+
+	#/////////////////////////////////////////////////////////////////////////////////////////
+	#region Constants and Configuration Variables
+	CMD_INITIALIZE_CONNECTION       = u'INITIALIZECONNECTION'
+	CMD_TERMINATE_PROCESSING_THREAD = u'TERMINATEPROCESSING'
+	CMD_PAUSE_PROCESSING            = u'PAUSEPROCESSING'
+	CMD_DOWNLOAD_UPDATE             = u'DOWNLOADUPDATE'
+
+	CMD_UPDATE_DEVICE_STATUS_FULL   = u'UPDATEDEVICESTATUS_FULL'
+	CMD_UPDATE_DEVICE_STATE         = u'UPDATEDEVICESTATE'
+
+	CMD_NETWORKING_WOL_REQUEST      = u'SENDWOLREQUEST'
+	CMD_DEVICE_RECONNECT            = u'RECONNECTDEVICE'
+
+	CMD_DEBUG_LOGUPNPDEVICES        = u'LOGUPNPDEVICES'
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////////
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Construction and Destruction Methods
@@ -56,10 +62,16 @@ class RPFrameworkCommand(object):
 	# provided delimiter when necessary
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def getPayloadAsList(self, delim=u'|*|'):
-		if isinstance(self.commandPayload, basestring):
-			return self.commandPayload.split(delim)
+		if sys.version_info > (3,):
+			if isinstance(self.commandPayload, str) or isinstance(self.commandPayload, bytes):
+				return self.commandPayload.split(delim)
+			else:
+				return self.commandPayload
 		else:
-			return self.commandPayload
+			if isinstance(self.commandPayload, basestring):
+				return self.commandPayload.split(delim)
+			else:
+				return self.commandPayload
 
 	#endregion
 	#/////////////////////////////////////////////////////////////////////////////////////

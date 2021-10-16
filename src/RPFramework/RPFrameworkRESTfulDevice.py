@@ -40,24 +40,6 @@ from   .RPFrameworkUtils         import to_unicode
 #/////////////////////////////////////////////////////////////////////////////////////////
 
 #/////////////////////////////////////////////////////////////////////////////////////////
-#region Constants and Configuration Variables
-CMD_RESTFUL_PUT   = u'RESTFUL_PUT'
-CMD_RESTFUL_GET   = u'RESTFUL_GET'
-CMD_SOAP_REQUEST  = u'SOAP_REQUEST'
-CMD_JSON_REQUEST  = u'JSON_REQUEST'
-CMD_DOWNLOADFILE  = u'DOWNLOAD_FILE'
-CMD_DOWNLOADIMAGE = u'DOWNLOAD_IMAGE'
-
-GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY = u'updateStatusPollerIntervalProperty'
-GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID         = u'updateStatusPollerActionId'
-GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY     = u'updateStatusPollerStartupDelay'
-
-GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
-
-#endregion
-#/////////////////////////////////////////////////////////////////////////////////////////
-
-#/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 # RPFrameworkRESTfulDevice
 #	This class is a concrete implementation of the RPFrameworkDevice as a device which
@@ -65,6 +47,24 @@ GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
 #/////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////
 class RPFrameworkRESTfulDevice(RPFrameworkDevice):
+
+	#/////////////////////////////////////////////////////////////////////////////////////////
+	#region Constants and Configuration Variables
+	CMD_RESTFUL_PUT   = u'RESTFUL_PUT'
+	CMD_RESTFUL_GET   = u'RESTFUL_GET'
+	CMD_SOAP_REQUEST  = u'SOAP_REQUEST'
+	CMD_JSON_REQUEST  = u'JSON_REQUEST'
+	CMD_DOWNLOADFILE  = u'DOWNLOAD_FILE'
+	CMD_DOWNLOADIMAGE = u'DOWNLOAD_IMAGE'
+
+	GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY = u'updateStatusPollerIntervalProperty'
+	GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID         = u'updateStatusPollerActionId'
+	GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY     = u'updateStatusPollerStartupDelay'
+
+	GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES = u'emptyQueueReducedWaitCycles'
+
+	#endregion
+	#/////////////////////////////////////////////////////////////////////////////////////////
 	
 	#/////////////////////////////////////////////////////////////////////////////////////
 	#region Class Construction and Destruction Methods
@@ -97,11 +97,11 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 			
 			# retrieve any configuration information that may have been setup in the
 			# plugin configuration and/or device configuration
-			updateStatusPollerPropertyName = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY, u'updateInterval')
+			updateStatusPollerPropertyName = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkRESTfulDevice.GUI_CONFIG_RESTFULSTATUSPOLL_INTERVALPROPERTY, u'updateInterval')
 			updateStatusPollerInterval     = int(self.indigoDevice.pluginProps.get(updateStatusPollerPropertyName, u'90'))
 			updateStatusPollerNextRun      = None
-			updateStatusPollerActionId     = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID, u'')
-			emptyQueueReducedWaitCycles    = int(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES, u'80'))
+			updateStatusPollerActionId     = self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkRESTfulDevice.GUI_CONFIG_RESTFULSTATUSPOLL_ACTIONID, u'')
+			emptyQueueReducedWaitCycles    = int(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkRESTfulDevice.GUI_CONFIG_RESTFULDEV_EMPTYQUEUE_SPEEDUPCYCLES, u'80'))
 			
 			# begin the infinite loop which will run as long as the queue contains commands
 			# and we have not received an explicit shutdown request
@@ -124,7 +124,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 						
 						# if the device supports polling for status, it may be initiated here now; however, we should implement a pause to ensure that
 						# devices are created properly (RESTFul devices may respond too fast since no connection need be established)
-						statusUpdateStartupDelay = float(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY, u'3'))
+						statusUpdateStartupDelay = float(self.hostPlugin.getGUIConfigValue(self.indigoDevice.deviceTypeId, RPFrameworkRESTfulDevice.GUI_CONFIG_RESTFULSTATUSPOLL_STARTUPDELAY, u'3'))
 						if statusUpdateStartupDelay > 0.0:
 							commandQueue.put(RPFrameworkCommand.RPFrameworkCommand(RPFrameworkCommand.CMD_PAUSE_PROCESSING, commandPayload=str(statusUpdateStartupDelay)))
 						commandQueue.put(RPFrameworkCommand.RPFrameworkCommand(RPFrameworkCommand.CMD_UPDATE_DEVICE_STATUS_FULL, parentAction=updateStatusPollerActionId))
@@ -162,7 +162,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 						except:
 							self.hostPlugin.logger.error(u'Failed to send Wake-on-LAN packet')
 						
-					elif command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_RESTFUL_PUT or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+					elif command.commandName == RPFrameworkRESTfulDevice.CMD_RESTFUL_GET or command.commandName == RPFrameworkRESTfulDevice.CMD_RESTFUL_PUT or command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADFILE or command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADIMAGE:
 						try:
 							self.hostPlugin.logger.debug(u'Processing GET operation: {0}'.format(command.commandPayload))
 							
@@ -207,9 +207,9 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 									authenticationParam = (username, password)
 							
 							# execute the URL fetching depending upon the method requested
-							if command.commandName == CMD_RESTFUL_GET or command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+							if command.commandName == RPFrameworkRESTfulDevice.CMD_RESTFUL_GET or command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADFILE or command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADIMAGE:
 								responseObj = requests.get(fullGetUrl, auth=authenticationParam, headers=customHeaders, verify=False)
-							elif command.commandName == CMD_RESTFUL_PUT:
+							elif command.commandName == RPFrameworkRESTfulDevice.CMD_RESTFUL_PUT:
 								dataToPost = None
 								if len(commandPayloadList) >= 6:
 									dataToPost = commandPayloadList[5]
@@ -219,7 +219,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 							if responseObj.status_code == 200:
 								# the response handling will depend upon the type of command... binary returns must be
 								# handled separately from (expected) text-based ones
-								if command.commandName == CMD_DOWNLOADFILE or command.commandName == CMD_DOWNLOADIMAGE:
+								if command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADFILE or command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADIMAGE:
 									# this is a binary return that should be saved to the file system without modification
 									if len(commandPayloadList) >= 6:
 										saveLocation = commandPayloadList[5]
@@ -230,7 +230,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 											localFile.write(responseObj.content)
 											self.hostPlugin.logger.threaddebug(u'Command Response: [{0}] -=- binary data written to {1}-=-'.format(responseObj.status_code, saveLocation))
 										
-											if command.commandName == CMD_DOWNLOADIMAGE:
+											if command.commandName == RPFrameworkRESTfulDevice.CMD_DOWNLOADIMAGE:
 												imageResizeWidth = 0
 												imageResizeHeight = 0
 												if len(command.commandPayload) >= 7:
@@ -283,7 +283,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 							# catching any of our response error conditions
 							self.handleRESTfulError(command, e, None)
 						
-					elif command.commandName == CMD_SOAP_REQUEST or command.commandName == CMD_JSON_REQUEST:
+					elif command.commandName == RPFrameworkRESTfulDevice.CMD_SOAP_REQUEST or command.commandName == RPFrameworkRESTfulDevice.CMD_JSON_REQUEST:
 						responseObj = None
 						try:
 							# this is to post a SOAP request to a web service... this will be similar to a restful put request
@@ -299,7 +299,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 
 							customHeaders = {}
 							self.addCustomHTTPHeaders(customHeaders)
-							if command.commandName == CMD_SOAP_REQUEST:
+							if command.commandName == RPFrameworkRESTfulDevice.CMD_SOAP_REQUEST:
 								customHeaders["Content-type"] = "text/xml; charset=\"UTF-8\""
 								customHeaders["SOAPAction"]   = to_str(soapAction)
 							else:
@@ -405,7 +405,7 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 	# descendant classes to do their own processing
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-		
 	def handleRESTfulError(self, rpCommand, err, response=None):
-		if rpCommand.commandName == CMD_RESTFUL_PUT or rpCommand.commandName == CMD_RESTFUL_GET:
+		if rpCommand.commandName == RPFrameworkRESTfulDevice.CMD_RESTFUL_PUT or rpCommand.commandName == RPFrameworkRESTfulDevice.CMD_RESTFUL_GET:
 			self.hostPlugin.logger.exception(u'An error occurred executing the GET/PUT request (Device: {0}): {1}'.format(self.indigoDevice.id, err))
 		else:
 			self.hostPlugin.logger.exception(u'An error occurred processing the SOAP/JSON POST request: (Device: {0}): {1}'.format(self.indigoDevice.id, err))

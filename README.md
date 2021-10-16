@@ -1,28 +1,28 @@
-#Introduction
+# Introduction
 This project aims to create a reusable framework/library of code that speeds the development (and reduces the maintenance) of plugins for Indigo Domo's home automation platform. It attempts to guide the developer into best-practices for key elements of the plugin such as:
 - Execution of long-running actions on background threads
 - Queued action/messaging system to handle multiple simultaneous incoming requests
 - Configuring redundant handlers via configuration files instead of boilerplate code
 
-#Installing the Framework into Your Project
+# Installing the Framework into Your Project
 The framework may be copied into a subdirectory of your plugin project and used as an included module; however, that makes maintenance and updates a bit of a chore. Instead, the recommended approach is that you add the framework as a sub-module to your project, allowing independent upgrading by pulling the latest in via standard git commands.
 
-##Adding the Submodule to a Project
+## Adding the Submodule to a Project
 INSTRUCTIONS HERE
 
-##Updating the RPFramework
+## Updating the RPFramework
 INSTRUCTIONS HERE
 
-#Incorporating into Plugins
+# Incorporating into Plugins
 Developing a plugin using the framework requires thinking slightly different than starting from scratch; it isn't harder, just a slightly different approach! The easiest thing for many people to do is follow along with an example project, which you may find INSERT LINK HERE.
 
-##Inhert from RPFrameworkPlugin
+## Inhert from RPFrameworkPlugin
 The first step is to inherit your primary plugin from RPFrameworkPlugin, which provides most of the base functionality for the framework. In your *plugin.py* file, change the main class to:
 ```
 class Plugin(RPFramework.RPFrameworkPlugin.RPFrameworkPlugin):
 ```
 
-##Create Device (Python) Classes
+## Create Device (Python) Classes
 The RPFramework is designed such that each device type is represented by a Python class which inherits from one of the base RPFramework device types. There are four major device base classes provided to you:
 -RPFrameworkDevice (bare bones class for truly custom device)
 -RPFrameworkRESTfulDevice (provides connectivity to HTTP based devices)
@@ -36,12 +36,12 @@ class MyAwesomeDevice(RPFrameworkRESTfulDevice):
 
 The device classes will be mapped to your Indigo deviceTypeId's in the configuration file below. More documentation on these base classes may be found in the Wiki.
 
-##Create the RPFramework Configuration File
+## Create the RPFramework Configuration File
 You configure many of the options and behaviors of the framework using the RPFrameworkConfiguration.xml file. If you are using a standard device type such as a device that uses a JSON web service then you may be able to completely configure the device without writing a line of code!
 
 Below is a brief overview of the major sections; the Wiki pages provide more details and a sample configuration file is available in the *docs* folder of this repository.
 
-###GUI Configuration
+### GUI Configuration
 This section provides some basic settings to determine how your plugin will present itself, such as customizing the included menu items.
 ```
 <guiConfiguration>
@@ -50,7 +50,7 @@ This section provides some basic settings to determine how your plugin will pres
 </guiConfiguration>
 ```
 
-###Device Mapping
+### Device Mapping
 Here you will map all of your devices, as defined in the Devices.xml file, to the Python classes you created in the previous step. Each device type should have an included entry
 ```
 <deviceMapping>
@@ -59,7 +59,7 @@ Here you will map all of your devices, as defined in the Devices.xml file, to th
 </deviceMapping>
 ```
 
-###Device Definitions
+### Device Definitions
 This section allows you to configure the devices themselves in order to take advantage of the framework's base functionality. Configuring your device here automatically enables features such as input validation on the Device Configuration Screen, action parameter validation, and even how the device handles responses (when using the RESTful or Telnet devices). The following sample is from the Sony Network Remote plugin which is based on the RESTful base device class.
 
 ```
@@ -98,7 +98,7 @@ This section allows you to configure the devices themselves in order to take adv
 ```
 Please see the Wiki for detailed information regarding defining device parameters and responses.
 
-###Actions
+### Actions
 This section allows you to define information related to the actions that you have setup for devices within the Actions.xml file. Defining and allowing the framework to manage the actions provides you with built-in support for features such as UI validation, automatic handling of the code to execute (i.e. no need to write any code for HTTP or Telnet operations!), etc. It still allows you to call a custom function to handle the action if required, of course.
 ```
 <actions>
@@ -138,7 +138,7 @@ This section allows you to define information related to the actions that you ha
 ```
 More details are required for this configuration - such as what commands are available and how to configure parameters - in the Wiki area.
 
-##Standard Configuration Files
+## Standard Configuration Files
 Taking advantage of the framework's processing as defined in the above section is very easy - you need only assign the framework's handler as the callback in your *Actions.xml* and *MenuItems.xml* file. For the *Actions.xml*, simply set **executeAction** as the *CallbackMethod* for each action.
 ```
 <Actions>

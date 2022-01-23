@@ -1,0 +1,8 @@
+.gitattributes export-ignore
+.gitignore export-ignore
+docs/ export-ignore
+tests/ export-ignore
+*.code-workspace export-ignore
+LICENSE.txt export-ignore
+README.md export-ignore
+VERSION_HISTORY.txt export-ignore

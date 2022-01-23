@@ -51,20 +51,18 @@ class RPFrameworkDevice(object):
 	# member variables
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	def __init__(self, plugin, device):
-		self.hostPlugin               = plugin
-		self.indigoDevice             = device
-		self.childDevices             = dict()
-		self.deviceInstanceIdentifier = random.getrandbits(16)
+		self.hostPlugin                = plugin
+		self.indigoDevice              = device
+		self.childDevices              = dict()
+		self.deviceInstanceIdentifier  = random.getrandbits(16)
 
-		self.dbConn                   = None
-		self.commandQueue             = Queue.Queue()
-		self.concurrentThread         = None
+		self.commandQueue              = Queue.Queue()
+		self.concurrentThread          = None
+		self.failedConnectionAttempts  = 0
+		self.emptyQueueThreadSleepTime = 0.1
 		
-		self.failedConnectionAttempts = 0
-		self.emptyQueueProcessingThreadSleepTime = 0.1
-		
-		self.upgradedDeviceStates     = list()
-		self.upgradedDeviceProperties = list()
+		self.upgradedDeviceStates      = list()
+		self.upgradedDeviceProperties  = list()
 
 	#endregion
 	#/////////////////////////////////////////////////////////////////////////////////////

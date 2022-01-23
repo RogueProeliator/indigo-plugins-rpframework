@@ -240,10 +240,10 @@ class RPFrameworkTelnetDevice(RPFrameworkDevice):
 				
 					# when the queue is empty, pause a bit on each iteration
 					if lastQueuedCommandCompleted > 0:
-						time.sleep(self.emptyQueueProcessingThreadSleepTime/2)
+						time.sleep(self.emptyQueueThreadSleepTime/2)
 						lastQueuedCommandCompleted = lastQueuedCommandCompleted - 1
 					else:
-						time.sleep(self.emptyQueueProcessingThreadSleepTime)
+						time.sleep(self.emptyQueueThreadSleepTime)
 				
 					# check to see if we need to issue an update...
 					if updateStatusPollerNextRun is not None and time.time() > updateStatusPollerNextRun:

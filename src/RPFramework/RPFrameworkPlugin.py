@@ -521,7 +521,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 	def runConcurrentThread(self):
 		try:
 			# read in any configuration values necessary...
-			emptyQueueProcessingThreadSleepTime = float(self.getGUIConfigValue(GUI_CONFIG_PLUGINSETTINGS, GUI_CONFIG_PLUGIN_COMMANDQUEUEIDLESLEEP, u'20'))
+			emptyQueueThreadSleepTime = float(self.getGUIConfigValue(GUI_CONFIG_PLUGINSETTINGS, GUI_CONFIG_PLUGIN_COMMANDQUEUEIDLESLEEP, u'20'))
 			
 			while True:
 				# process pending commands now...
@@ -571,7 +571,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 				
 				# sleep on an empty queue... note that this should not normally be as granular
 				# as a device's communications! (value is in seconds)
-				self.sleep(emptyQueueProcessingThreadSleepTime)
+				self.sleep(emptyQueueThreadSleepTime)
 				
 		except self.StopThread:
 			# this exception is simply shutting down the thread... there is nothing
@@ -874,6 +874,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			self.indigo_log_handler.setLevel(logging.INFO)
 			self.pluginPrefs["debugLevel"] = DEBUGLEVEL_NONE
 			self.logger.info(u'Debug disabled by user')
+		self.savePluginPrefs()
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine will be called when the user has created a request to log the UPnP
@@ -1070,7 +1071,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 			discoveredDevices = uPnPDiscover(serviceId)
 			self.logger.debug(u'Found {0} devices'.format(len(discoveredDevices)))
 			
-			self.enumeratedDevices = discoveredDevices
+			self.enumeratedDevices     = discoveredDevices
 			self.lastDeviceEnumeration = time.time()
 			
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -1085,32 +1086,7 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		
 		requestedFilePath = os.path.join(indigoBasePath, "Plugins/{0}.indigoPlugin/Contents/Server Plugin/{1}".format(pluginName, fileName))
 		return to_str(requestedFilePath)
-		
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	# This routine will write out a plugin report to a file; it is intended to give us a
-	# standard routine and look/feel for generating reports from the plugins
-	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-	def writePluginReport(self, headerText, headerProperties, reportHtml, reportFilename, isRelativePath = True):
-		reportHtmlHeader  = u"<html><head><title>" + headerText + u"</title><style type='text/css'>html,body { margin: 0px; padding: 0px; width: 100%; height: 100%; }\n.upnpDevice { margin: 10px 0px 8px 5px; border-bottom: solid 1px #505050; }\n.fieldLabel { width: 140px; display: inline-block; }</style></head><body>"
-		reportHtmlHeader += u"<div style='background-color: #3f51b5; width: 100%; height: 50px; border-bottom: solid 2px black;'><span style='color: #a1c057; font-size: 25px; font-weight: bold; line-height: 49px; padding-left: 3px;'>" + headerText + u"</span></div>"
-		if len(headerProperties) > 0:
-			reportHtmlHeader += u"<div style='border-bottom: solid 2px black; padding: 8px 3px;'>"
-			for headerProp in headerProperties:
-				reportHtmlHeader += u"<div><span class='fieldLabel'><b>" + to_unicode(headerProp[0]) + u"</b></span>" + to_unicode(headerProp[1]) + u"</div>"
-			reportHtmlHeader += u"</div>"
 			
-		reportFooter = u"</body></html>"
-		
-		reportFullHtml = reportHtmlHeader + reportHtml + reportFooter
-		
-		if isRelativePath == True:
-			reportFilename = self.getPluginDirectoryFilePath(reportFilename)
-		reportOutputFile = open(reportFilename, 'w')
-		reportOutputFile.write(to_str(reportFullHtml))
-		reportOutputFile.close()
-		
-		return reportFilename
-		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine is called whenever the plugin is updating from an older version, as
 	# determined by the plugin property and plugin version number
@@ -1121,25 +1097,28 @@ class RPFrameworkPlugin(indigo.PluginBase):
 		else:
 			self.logger.info(u'Performing upgrade from {0} to {1}'.format(oldVersion, newVersion))
 			
-		# execute the version-specific tasks
-		if oldVersion == u'':
-			# this is the first run of the plugin or the first run of the Indigo 7
-			# version... remove unused Requests module if it is present
-			pluginBasePath = os.getcwd()
-			rpFrameworkRequestsPath = os.path.join(pluginBasePath, "RPFramework/requests")
-			if os.path.isdir(rpFrameworkRequestsPath):
-				try:
-					self.logger.debug(u'Removing unused directory tree at {0}'.format(rpFrameworkRequestsPath))
-					shutil.rmtree(rpFrameworkRequestsPath)
-				except:
-					self.logger.exception(u'Failed to remove legacy "requests" from RPFramework directory')
+		# remove any unwanted directories from the RPFramework
+		pluginBasePath = os.getcwd()
+		removePaths = 	[	os.path.join(pluginBasePath, "RPFramework/requests"),
+							os.path.join(pluginBasePath, "RPFramework/dataAccess")]
+		for removePath in removePaths:
+			try:
+				if os.path.isdir(removePath):
+					self.logger.debug(u'Removing unused directory tree at {0}'.format(removePath))
+					shutil.rmtree(removePath)
+				elif os.path.isfile(removePath):
+					os.remove(removePath)
+			except:
+				self.logger.error(u'Failed to remove path during upgrade: {0}'.format(removePath))
+
 					
 		# allow the descendant classes to perform their own upgrade options
 		self.performPluginUpgrade(oldVersion, newVersion)
 		
 		# update the version flag within our plugin
 		self.pluginPrefs['loadedPluginVersion'] = newVersion
-		self.logger.debug(u'Completed plugin updating/installation for {0}'.format(newVersion))
+		self.savePluginPrefs()
+		self.logger.info(u'Completed plugin updating/installation for {0}'.format(newVersion))
 		
 	#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 	# This routine may be used by plugins to perform any upgrades specific to the plugin;

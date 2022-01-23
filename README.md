@@ -1,5 +1,6 @@
 # Introduction
 This project aims to create a reusable framework/library of code that speeds the development (and reduces the maintenance) of plugins for Indigo Domo's home automation platform. It attempts to guide the developer into best-practices for key elements of the plugin such as:
+- Reducing the need to (re)write boilerplate code in multiple plugins
 - Execution of long-running actions on background threads
 - Queued action/messaging system to handle multiple simultaneous incoming requests
 - Configuring redundant handlers via configuration files instead of boilerplate code

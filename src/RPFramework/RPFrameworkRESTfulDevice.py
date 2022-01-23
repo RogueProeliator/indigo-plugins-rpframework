@@ -345,10 +345,10 @@ class RPFrameworkRESTfulDevice(RPFrameworkDevice):
 					# if we have just completed a command recently, half the amount of
 					# wait time, assuming that a subsequent command could be forthcoming
 					if lastQueuedCommandCompleted > 0:
-						time.sleep(self.emptyQueueProcessingThreadSleepTime/2)
+						time.sleep(self.emptyQueueThreadSleepTime/2)
 						lastQueuedCommandCompleted = lastQueuedCommandCompleted - 1
 					else:
-						time.sleep(self.emptyQueueProcessingThreadSleepTime)
+						time.sleep(self.emptyQueueThreadSleepTime)
 				
 				# check to see if we need to issue an update...
 				if updateStatusPollerNextRun is not None and time.time() > updateStatusPollerNextRun:

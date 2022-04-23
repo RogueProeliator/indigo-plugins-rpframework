@@ -17,10 +17,10 @@ def test_to_unicode_list():
     assert src.RPFramework.RPFrameworkUtils.to_unicode(x) == u"['abc', 'def', 'ghi']"
 
 def test_to_unicode_dict():
-    dict = {'Name': 'Zara', 'Age': 7}
-    assert src.RPFramework.RPFrameworkUtils.to_unicode(dict) == u"{'Name': 'Zara', 'Age': 7}"
+    test_dict = {'Name': 'Zara', 'Age': 7}
+    assert src.RPFramework.RPFrameworkUtils.to_unicode(test_dict) == "{'Name': 'Zara', 'Age': 7}"
 
 def test_to_unicode_complex():
-    x = ['abc', 'def', 'ghi']
-    dict = {'Name': 'Zara', 'Age': 7, 'Alpha': x}
-    assert src.RPFramework.RPFrameworkUtils.to_unicode(dict) == u"{'Name': 'Zara', 'Age': 7, 'Alpha': ['abc', 'def', 'ghi']}"
+    inner_dict = ['abc', 'def', 'ghi']
+    test_dict  = {'Name': 'Zara', 'Age': 7, 'Alpha': inner_dict}
+    assert src.RPFramework.RPFrameworkUtils.to_unicode(test_dict) == "{'Name': 'Zara', 'Age': 7, 'Alpha': ['abc', 'def', 'ghi']}"

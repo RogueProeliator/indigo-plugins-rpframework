@@ -6,13 +6,10 @@ This project aims to create a reusable framework/library of code that speeds the
 - Configuring redundant handlers via configuration files instead of boilerplate code
 
 # Installing the Framework into Your Project
-The framework may be copied into a subdirectory of your plugin project and used as an included module; however, that makes maintenance and updates a bit of a chore. Instead, the recommended approach is that you add the framework as a sub-module to your project, allowing independent upgrading by pulling the latest in via standard git commands.
+The framework may be copied into a subdirectory of your plugin project and used as an included module; however, that makes maintenance and updates a bit of a chore. Instead, the recommended approach is that you add the framework as a sub-module to your project, allowing independent upgrading by pulling the latest in via standard git commands. Note you will pull from the source repo for the cleanest install: [indigo-plugins-rpframework-src](https://github.com/RogueProeliator/indigo-plugins-rpframework/wiki/1.-Installing-the-Framework)
 
 ## Adding the Submodule to a Project
-INSTRUCTIONS HERE
-
-## Updating the RPFramework
-INSTRUCTIONS HERE
+The preferred way to add the framework is via submodules; for more information, see the [wiki](https://github.com/RogueProeliator/indigo-plugins-rpframework/wiki/1.-Installing-the-Framework).
 
 # Incorporating into Plugins
 Developing a plugin using the framework requires thinking slightly different than starting from scratch; it isn't harder, just a slightly different approach! The easiest thing for many people to do is follow along with an example project, which you may find INSERT LINK HERE.
